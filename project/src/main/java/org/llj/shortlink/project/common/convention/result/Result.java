@@ -12,7 +12,7 @@ import java.io.Serializable;
 @Data
 @Accessors(chain = true)
 public class Result<T> implements Serializable {
-// TODO 编译报错
+
 //    @Serial
 //    private static final long serialVersionUID = 5679018624309023727L;
 

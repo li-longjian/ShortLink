@@ -3,6 +3,7 @@ package org.llj.shortlink.project.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -13,6 +14,7 @@ import org.llj.shortlink.project.dao.entity.ShortLinkDO;
 import org.llj.shortlink.project.dao.mapper.ShortLinkMapper;
 import org.llj.shortlink.project.dto.req.LinkCreateReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkPageReqDTO;
+import org.llj.shortlink.project.dto.resp.GroupLinkCountRespDTO;
 import org.llj.shortlink.project.dto.resp.LinkCreateRespDTO;
 import org.llj.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import org.llj.shortlink.project.service.ShortLinkService;
@@ -22,6 +24,8 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import java.rmi.server.ServerCloneException;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -70,6 +74,18 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .orderByDesc(ShortLinkDO::getCreateTime);
         IPage<ShortLinkDO> pageResults = baseMapper.selectPage(shortLinkPageReqDTO, queryWrapper);
         return pageResults.convert(res -> BeanUtil.toBean(res, ShortLinkPageRespDTO.class));
+    }
+
+    @Override
+    public List<GroupLinkCountRespDTO> getGroupLinkCount(List<String> requestParam) {
+
+        QueryWrapper<ShortLinkDO> queryWrapper = Wrappers.query(ShortLinkDO.class)
+                .select("gid as gid, count(*) as shortLinkCount")
+                .in("gid", requestParam)
+                .eq("enable_status", 0)
+                .groupBy("gid");
+        List<Map<String, Object>> Links = baseMapper.selectMaps(queryWrapper);
+        return BeanUtil.copyToList(Links, GroupLinkCountRespDTO.class);
     }
 
     public  String generateLinkSuffix(LinkCreateReqDTO linkCreateReqDTO){

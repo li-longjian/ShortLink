@@ -6,10 +6,13 @@ import org.llj.shortlink.project.common.convention.result.Result;
 import org.llj.shortlink.project.common.convention.result.Results;
 import org.llj.shortlink.project.dto.req.LinkCreateReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkPageReqDTO;
+import org.llj.shortlink.project.dto.resp.GroupLinkCountRespDTO;
 import org.llj.shortlink.project.dto.resp.LinkCreateRespDTO;
 import org.llj.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import org.llj.shortlink.project.service.ShortLinkService;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/shortlink/v1/link")
@@ -32,6 +35,12 @@ public class ShortLinkController {
     public Result<IPage<ShortLinkPageRespDTO>> getShortLinkPage(ShortLinkPageReqDTO shortLinkPageReqDTO) {
         return Results.success(shortLinkService.getPage(shortLinkPageReqDTO));
 
+    }
+
+
+    @GetMapping("/count")
+    public Result<List<GroupLinkCountRespDTO>> countGroupLinkCount(@RequestParam List<String> requestParam) {
+        return Results.success(shortLinkService.getGroupLinkCount(requestParam));
     }
 
 }
