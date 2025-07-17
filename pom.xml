@@ -25,6 +25,7 @@
     <jjwt.version>0.9.1</jjwt.version>
     <fastjson2.version>2.0.36</fastjson2.version>
     <mybatis-plus.version>3.5.10.1</mybatis-plus.version>
+    <mybatis-plus-jsqlparser.version>3.5.10.1</mybatis-plus-jsqlparser.version>
     <dozer-core.version>6.5.2</dozer-core.version>
     <hutool-all.version>5.8.20</hutool-all.version>
     <redisson.version>3.21.3</redisson.version>
@@ -111,6 +112,12 @@
         <artifactId>guava</artifactId>
         <version>${guava.version}</version>
       </dependency>
+      <!-- https://mvnrepository.com/artifact/com.baomidou/mybatis-plus-jsqlparser -->
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-jsqlparser</artifactId>
+        <version>${mybatis-plus-jsqlparser.version}</version>
+      </dependency>
     </dependencies>
 
   </dependencyManagement>
@@ -120,6 +127,14 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <goals>-->
+<!--              <goal>repackage</goal>-->
+<!--            </goals>-->
+<!--          </execution>-->
+<!--        </executions>-->
       </plugin>
     </plugins>
   </build>

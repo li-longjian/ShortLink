@@ -1,7 +1,9 @@
 package org.llj.shortlink.project.service.impl;
 
 
+import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import groovy.util.logging.Slf4j;
@@ -10,7 +12,9 @@ import org.llj.shortlink.project.common.Exception.ServiceException;
 import org.llj.shortlink.project.dao.entity.ShortLinkDO;
 import org.llj.shortlink.project.dao.mapper.ShortLinkMapper;
 import org.llj.shortlink.project.dto.req.LinkCreateReqDTO;
+import org.llj.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import org.llj.shortlink.project.dto.resp.LinkCreateRespDTO;
+import org.llj.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import org.llj.shortlink.project.service.ShortLinkService;
 import org.llj.shortlink.project.utils.HashUtil;
 import org.redisson.api.RBloomFilter;
@@ -57,6 +61,17 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .clickNum(shortLinkDO.getClickNum())
                 .build();
     }
+
+    @Override
+    public IPage<ShortLinkPageRespDTO> getPage(ShortLinkPageReqDTO shortLinkPageReqDTO) {
+        LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class).eq(ShortLinkDO::getGid, shortLinkPageReqDTO.getGid())
+                .eq(ShortLinkDO::getDelFlag, 0)
+                .eq(ShortLinkDO::getEnableStatus, 0)
+                .orderByDesc(ShortLinkDO::getCreateTime);
+        IPage<ShortLinkDO> pageResults = baseMapper.selectPage(shortLinkPageReqDTO, queryWrapper);
+        return pageResults.convert(res -> BeanUtil.toBean(res, ShortLinkPageRespDTO.class));
+    }
+
     public  String generateLinkSuffix(LinkCreateReqDTO linkCreateReqDTO){
         int cnt = 0;
         int maxTryCount = 10;

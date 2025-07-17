@@ -1,11 +1,16 @@
 package org.llj.shortlink.project.service;
 
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.llj.shortlink.project.dao.entity.ShortLinkDO;
 import org.llj.shortlink.project.dto.req.LinkCreateReqDTO;
+import org.llj.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import org.llj.shortlink.project.dto.resp.LinkCreateRespDTO;
+import org.llj.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 
 public interface ShortLinkService extends IService<ShortLinkDO> {
     LinkCreateRespDTO createShortLink(LinkCreateReqDTO linkCreateReqDTO);
+
+    IPage<ShortLinkPageRespDTO> getPage(ShortLinkPageReqDTO shortLinkPageReqDTO);
 }
