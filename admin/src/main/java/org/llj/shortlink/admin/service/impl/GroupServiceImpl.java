@@ -15,6 +15,8 @@ import org.llj.shortlink.admin.dto.req.GroupUpdateReqDTO;
 import org.llj.shortlink.admin.dto.resp.GroupGetRespDTO;
 import org.llj.shortlink.admin.service.GroupService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -23,9 +25,11 @@ import static org.llj.shortlink.admin.utils.RandomStringGenerator.generateSixDig
 @Service
 public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implements GroupService {
 
-    //private static final String USERNAME = BaseContext.getUserName();
+
     @Override
+    @Transactional(propagation = Propagation.REQUIRED)
     public void addGroup(String name) {
+
         val queryWrapper = Wrappers.lambdaQuery(GroupDO.class)
                 .eq(GroupDO::getName, name)
                 .eq(GroupDO::getUsername, BaseContext.getUserName())
@@ -38,7 +42,27 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
         }while(checkGIDisExist(gid));
         GroupDO build = GroupDO.builder()
                 .name(name)
+                .username(BaseContext.getUserName())
                 .gid(gid)
+                .build();
+        baseMapper.insert(build);
+    }
+
+    /**
+     * 方法重载： 对新注册用户，还未登录时，先创建一个默认分组
+     * @param name
+     * @param username
+     */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void addGroup(String name,String username) {
+        String gid = "";
+        do{
+            gid = generateSixDigits();
+        }while(checkGIDisExist(gid));
+        GroupDO build = GroupDO.builder()
+                .name(name)
+                .gid(gid)
+                .username(username)
                 .build();
         baseMapper.insert(build);
     }

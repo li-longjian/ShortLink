@@ -21,13 +21,18 @@ public class ShortLinkController {
 
     private final ShortLinkService shortLinkService;
 
+    /**
+     * 创建短连接
+     * @param linkCreateReqDTO
+     * @return
+     */
     @PostMapping("/create")
     public Result<LinkCreateRespDTO> createShortLink(@RequestBody LinkCreateReqDTO linkCreateReqDTO) {
         return Results.success(shortLinkService.createShortLink(linkCreateReqDTO));
     }
 
     /**
-     * 以分页查询某个分组下的所有有效的短连接
+     * 分页查询分组下的所有有效的短连接
      * @param shortLinkPageReqDTO
      * @return
      */
@@ -37,7 +42,11 @@ public class ShortLinkController {
 
     }
 
-
+    /**
+     * 统计分组下的短连接数量
+     * @param requestParam
+     * @return
+     */
     @GetMapping("/count")
     public Result<List<GroupLinkCountRespDTO>> countGroupLinkCount(@RequestParam List<String> requestParam) {
         return Results.success(shortLinkService.getGroupLinkCount(requestParam));

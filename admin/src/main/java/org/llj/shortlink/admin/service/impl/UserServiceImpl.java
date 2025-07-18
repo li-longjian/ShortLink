@@ -17,6 +17,7 @@ import org.llj.shortlink.admin.dto.req.UserRegisterReqDTO;
 import org.llj.shortlink.admin.dto.req.UserUpdatereqDTO;
 import org.llj.shortlink.admin.dto.resp.UserDTO;
 import org.llj.shortlink.admin.dto.resp.UserLoginRespDTO;
+import org.llj.shortlink.admin.service.GroupService;
 import org.llj.shortlink.admin.service.UserService;
 import org.llj.shortlink.admin.utils.JwtUtil;
 import org.redisson.api.RBloomFilter;
@@ -25,6 +26,8 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,6 +42,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDo> implements 
     private static final String TOKEN_PREFIX = "shortlink:token:";
     private final StringRedisTemplate redisTemplate;
     private  final String SECRET_KEY = "shortlink-token-secretKey-shortlink-token-secretKey-shortlink-token-secretKey-shortlink-token-secretKey-shortlink-token-secretKey-shortlink-token-secretKey";
+    private final GroupService groupService;
+
     @Override
     public UserDTO getUserByUserName(String username) {
         LambdaQueryWrapper<UserDo> queryWrapper = Wrappers.lambdaQuery(UserDo.class)
@@ -51,7 +56,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDo> implements 
     }
 
     /**
-     * 判断用户名是否存在,使用Redission布隆过滤器防止缓存穿透
+     * 判断用户名是否存在,使用Redission布隆过滤器防止缓存穿透 ，布隆过滤器判断不存在，则一定不存在，判定存在存在概率误判
      * @param username
      * @return
      */
@@ -65,6 +70,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDo> implements 
      * @param userRegisterReqDTO
      */
     @Override
+    @Transactional(propagation = Propagation.REQUIRED)
     public void registerUser(UserRegisterReqDTO userRegisterReqDTO) {
         if(checkUserNameIsExist(userRegisterReqDTO.getUsername())) throw  new ClientException(BaseErrorCode.USER_NAME_EXIST_ERROR);
         //对用户名进行加锁: 防止恶意用户对某一未使用用户名大量请求
@@ -73,9 +79,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDo> implements 
             if(lock.tryLock()) {
                 int inserted = baseMapper.insert(BeanUtil.toBean(userRegisterReqDTO, UserDo.class));
                 if (inserted < 1) throw new ClientException(BaseErrorCode.USER_REGISTER_ERROR);
+                String USERNAME = userRegisterReqDTO.getUsername();
+                //将用户注册成功的用户名加到布隆过滤器中,防止缓存穿透
+                rBloomFilter.add(USERNAME);
+                //为新注册用户添加默认分组
+                groupService.addGroup("default",USERNAME);
 
-                //将用户注册成功的用户名加到布隆过滤器中
-                rBloomFilter.add(userRegisterReqDTO.getUsername());
             }else{
                 throw new ClientException(BaseErrorCode.USER_NAME_EXIST_ERROR);
             }

@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface GroupService extends IService<GroupDO> {
     void addGroup(String name);
-
+    void addGroup(String name,String username);
     List<GroupGetRespDTO> groupList();
 
     void updateGroup(GroupUpdateReqDTO groupUpdateReqDTO);
@@ -19,4 +19,6 @@ public interface GroupService extends IService<GroupDO> {
     void deleteGroup(String gid);
 
     void updateOrdered(List<GroupOrderReqDTO> orderList);
+
+
 }
