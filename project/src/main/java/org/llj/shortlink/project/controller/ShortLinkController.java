@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.llj.shortlink.project.common.convention.result.Result;
 import org.llj.shortlink.project.common.convention.result.Results;
 import org.llj.shortlink.project.dto.req.LinkCreateReqDTO;
+import org.llj.shortlink.project.dto.req.LinkUpdateReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import org.llj.shortlink.project.dto.resp.GroupLinkCountRespDTO;
 import org.llj.shortlink.project.dto.resp.LinkCreateRespDTO;
@@ -31,6 +32,17 @@ public class ShortLinkController {
         return Results.success(shortLinkService.createShortLink(linkCreateReqDTO));
     }
 
+    /**
+     * 更新短连接
+     * @param linkUpdateReqDTO
+     * @return
+     */
+    @PostMapping("/update")
+    public Result<Void> updateShortLink(@RequestBody LinkUpdateReqDTO linkUpdateReqDTO) {
+        shortLinkService.updateLink(linkUpdateReqDTO);
+
+        return Results.success();
+    }
     /**
      * 分页查询分组下的所有有效的短连接
      * @param shortLinkPageReqDTO
