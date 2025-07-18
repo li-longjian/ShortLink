@@ -24,8 +24,8 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
         //注册管理端登录拦截器
         registry.addInterceptor(userInterceptor)
                 .addPathPatterns("/api/shortlink/**")
-                .excludePathPatterns("/api/shortlink/v1/user/login");
-
+                .excludePathPatterns("/api/shortlink/admin/v1/user/login")
+                .excludePathPatterns("/api/shortlink/admin/v1/user/register");
     }
 
     /**
