@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.llj.shortlink.project.common.Exception.ClientException;
 import org.llj.shortlink.project.common.Exception.ServiceException;
 import org.llj.shortlink.project.dao.entity.ShortLinkDO;
+import org.llj.shortlink.project.dao.entity.ShortLinkGotoDO;
+import org.llj.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import org.llj.shortlink.project.dao.mapper.ShortLinkMapper;
 import org.llj.shortlink.project.dto.req.LinkCreateReqDTO;
 import org.llj.shortlink.project.dto.req.LinkUpdateReqDTO;
@@ -38,6 +40,12 @@ import java.util.Objects;
 @Slf4j
 public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLinkDO> implements ShortLinkService {
     private  final RBloomFilter<String> rBloomFilter;
+    private final ShortLinkGotoMapper gotoMapper;
+    /**
+     * 创建短连接
+     * @param linkCreateReqDTO
+     * @return
+     */
     @Override
     public LinkCreateRespDTO createShortLink(LinkCreateReqDTO linkCreateReqDTO) {
         String shortLinkSuffix = generateLinkSuffix(linkCreateReqDTO);
@@ -58,8 +66,13 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .validDateType(linkCreateReqDTO.getValidDateType())
                 .clickNum(0)
                 .build();
+        ShortLinkGotoDO gotoDO = ShortLinkGotoDO.builder()
+                .gid(linkCreateReqDTO.getGid())
+                .fullShortUrl(fullShortLinkUrl)
+                .build();
         try{
             baseMapper.insert(shortLinkDO);
+            gotoMapper.insert(gotoDO);
         }catch (DuplicateKeyException exception){
             log.warn("短链接:"+fullShortLinkUrl+" 重复入库");
             throw  new ServiceException("短链接重复");
