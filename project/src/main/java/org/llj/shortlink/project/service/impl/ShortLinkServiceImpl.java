@@ -9,6 +9,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import groovy.util.logging.Slf4j;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jodd.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import org.llj.shortlink.project.common.Exception.ClientException;
 import org.llj.shortlink.project.common.Exception.ServiceException;
@@ -25,15 +28,22 @@ import org.llj.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import org.llj.shortlink.project.service.ShortLinkService;
 import org.llj.shortlink.project.utils.HashUtil;
 import org.redisson.api.RBloomFilter;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.rmi.server.ServerCloneException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import static org.llj.shortlink.project.common.constant.RedisKey.FULL_SHORT_URL_KEY;
+import static org.llj.shortlink.project.common.constant.RedisKey.LOCK_FULL_SHORT_URL_KEY;
 
 @Service
 @RequiredArgsConstructor
@@ -41,6 +51,66 @@ import java.util.Objects;
 public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLinkDO> implements ShortLinkService {
     private  final RBloomFilter<String> rBloomFilter;
     private final ShortLinkGotoMapper gotoMapper;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final RedissonClient redissonClient;
+    /**
+     * 短连接跳转源链接
+     * @param shortUri
+     * @param request
+     * @param response
+     */
+    @Override
+    public void reStoreUrl(String shortUri, HttpServletRequest request, HttpServletResponse response) {
+        String serverName = request.getServerName();
+        String scheme = request.getScheme();
+        String fullShortUrl = serverName + "/"  + shortUri;
+        String originalLink = stringRedisTemplate.opsForValue().get(String.format(FULL_SHORT_URL_KEY, fullShortUrl));
+        if(StringUtil.isNotBlank(originalLink)) {
+            try{
+                response.sendRedirect(originalLink);
+                return;
+            }catch (IOException e){
+                e.printStackTrace();
+            }
+
+        }
+        RLock lock = redissonClient.getLock(String.format(LOCK_FULL_SHORT_URL_KEY, fullShortUrl));
+        lock.lock();
+        try{
+           originalLink = stringRedisTemplate.opsForValue().get(String.format(FULL_SHORT_URL_KEY, fullShortUrl));
+            if(StringUtil.isNotBlank(originalLink)) {
+                try{
+                    response.sendRedirect(originalLink);
+                    return;
+                }catch (IOException e){
+                    e.printStackTrace();
+                }
+            }
+            LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
+                    .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
+            ShortLinkGotoDO gotoDO = gotoMapper.selectOne(queryWrapper);
+            if(gotoDO == null) return;
+            LambdaQueryWrapper<ShortLinkDO> wrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
+                    .eq(ShortLinkDO::getGid, gotoDO.getGid())
+                    .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)
+                    .eq(ShortLinkDO::getEnableStatus, 0)
+                    .eq(ShortLinkDO::getDelFlag, 0);
+            ShortLinkDO linkDO = baseMapper.selectOne(wrapper);
+            if(linkDO != null){
+                try {
+                    stringRedisTemplate.opsForValue().set(FULL_SHORT_URL_KEY,linkDO.getOriginUrl());
+                    response.sendRedirect(linkDO.getOriginUrl());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }finally {
+            lock.unlock();
+        }
+
+
+
+    }
     /**
      * 创建短连接
      * @param linkCreateReqDTO

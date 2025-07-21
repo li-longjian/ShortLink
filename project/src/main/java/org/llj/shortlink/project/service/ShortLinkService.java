@@ -3,6 +3,8 @@ package org.llj.shortlink.project.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.llj.shortlink.project.dao.entity.ShortLinkDO;
 import org.llj.shortlink.project.dto.req.LinkCreateReqDTO;
 import org.llj.shortlink.project.dto.req.LinkUpdateReqDTO;
@@ -21,4 +23,6 @@ public interface ShortLinkService extends IService<ShortLinkDO> {
     List<GroupLinkCountRespDTO> getGroupLinkCount(List<String> requestParam);
 
     void updateLink(LinkUpdateReqDTO linkUpdateReqDTO);
+
+    void reStoreUrl(String shortUri, HttpServletRequest request, HttpServletResponse response);
 }

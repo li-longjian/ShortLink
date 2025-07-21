@@ -1,6 +1,8 @@
 package org.llj.shortlink.project.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.llj.shortlink.project.common.convention.result.Result;
 import org.llj.shortlink.project.common.convention.result.Results;
@@ -16,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/shortlink/v1/link")
+
 @RequiredArgsConstructor
 public class ShortLinkController {
 
@@ -27,7 +29,7 @@ public class ShortLinkController {
      * @param linkCreateReqDTO
      * @return
      */
-    @PostMapping("/create")
+    @PostMapping("/api/shortlink/v1/link/create")
     public Result<LinkCreateRespDTO> createShortLink(@RequestBody LinkCreateReqDTO linkCreateReqDTO) {
         return Results.success(shortLinkService.createShortLink(linkCreateReqDTO));
     }
@@ -37,7 +39,7 @@ public class ShortLinkController {
      * @param linkUpdateReqDTO
      * @return
      */
-    @PostMapping("/update")
+    @PostMapping("/api/shortlink/v1/link/update")
     public Result<Void> updateShortLink(@RequestBody LinkUpdateReqDTO linkUpdateReqDTO) {
         shortLinkService.updateLink(linkUpdateReqDTO);
 
@@ -48,7 +50,7 @@ public class ShortLinkController {
      * @param shortLinkPageReqDTO
      * @return
      */
-    @GetMapping("/page")
+    @GetMapping("/api/shortlink/v1/link/page")
     public Result<IPage<ShortLinkPageRespDTO>> getShortLinkPage(ShortLinkPageReqDTO shortLinkPageReqDTO) {
         return Results.success(shortLinkService.getPage(shortLinkPageReqDTO));
 
@@ -59,9 +61,22 @@ public class ShortLinkController {
      * @param requestParam
      * @return
      */
-    @GetMapping("/count")
+    @GetMapping("/api/shortlink/v1/link/count")
     public Result<List<GroupLinkCountRespDTO>> countGroupLinkCount(@RequestParam List<String> requestParam) {
         return Results.success(shortLinkService.getGroupLinkCount(requestParam));
     }
 
+    /**
+     * 短连接跳转源链接
+     * @param shortUri
+     * @param request
+     * @param response
+     * @return
+     */
+    @GetMapping("/{short-uri}")
+    public Result<Void> reStoreUrl(@PathVariable("short-uri") String shortUri, HttpServletRequest request, HttpServletResponse response) {
+        shortLinkService.reStoreUrl(shortUri,request,response);
+        return Results.success();
+
+    }
 }
