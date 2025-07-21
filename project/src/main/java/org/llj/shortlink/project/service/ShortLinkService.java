@@ -25,4 +25,5 @@ public interface ShortLinkService extends IService<ShortLinkDO> {
     void updateLink(LinkUpdateReqDTO linkUpdateReqDTO);
 
     void reStoreUrl(String shortUri, HttpServletRequest request, HttpServletResponse response);
+
 }
