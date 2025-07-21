@@ -12,6 +12,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jodd.util.StringUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.llj.shortlink.project.common.Exception.ClientException;
 import org.llj.shortlink.project.common.Exception.ServiceException;
 import org.llj.shortlink.project.dao.entity.ShortLinkDO;
@@ -37,6 +41,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.rmi.server.ServerCloneException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -182,6 +188,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .validDateType(linkCreateReqDTO.getValidDateType())
                 .validDate(linkCreateReqDTO.getValidDate())
                 .clickNum(0)
+                .favicon(getFavicon(linkCreateReqDTO.getOriginUrl()))
                 .build();
         ShortLinkGotoDO gotoDO = ShortLinkGotoDO.builder()
                 .gid(linkCreateReqDTO.getGid())
@@ -296,5 +303,38 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         }
 
         return shortLinkSuffix;
+    }
+
+    /**
+     * 获取原链接网站图标
+     * @param url
+     * @return
+     */
+    @SneakyThrows
+    private String getFavicon(String url) {
+        URL targetUrl = new URL(url);
+        HttpURLConnection connection = (HttpURLConnection) targetUrl.openConnection();
+        connection.setInstanceFollowRedirects(false);
+        connection.setRequestMethod("GET");
+        connection.connect();
+        int responseCode = connection.getResponseCode();
+        if (responseCode == HttpURLConnection.HTTP_MOVED_PERM || responseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
+            String redirectUrl = connection.getHeaderField("Location");
+            if (redirectUrl != null) {
+                URL newUrl = new URL(redirectUrl);
+                connection = (HttpURLConnection) newUrl.openConnection();
+                connection.setRequestMethod("GET");
+                connection.connect();
+                responseCode = connection.getResponseCode();
+            }
+        }
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            Document document = Jsoup.connect(url).get();
+            Element faviconLink = document.select("link[rel~=(?i)^(shortcut )?icon]").first();
+            if (faviconLink != null) {
+                return faviconLink.attr("abs:href");
+            }
+        }
+        return null;
     }
 }
