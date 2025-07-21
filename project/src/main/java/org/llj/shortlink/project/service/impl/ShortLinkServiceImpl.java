@@ -77,10 +77,23 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         }
         boolean contains = rBloomFilter.contains(fullShortUrl); //防止缓存穿透
         if(!contains) {
+            try {
+                response.sendRedirect("/page/notfound");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             return;
         }
         String goToIsNull = stringRedisTemplate.opsForValue().get(String.format(IS_NULL_FULL_SHORT_URL_KEY, fullShortUrl));
-        if(StringUtil.isNotBlank(goToIsNull)) return;
+        if(StringUtil.isNotBlank(goToIsNull)) {
+            try {
+                response.sendRedirect("/page/notfound");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return;
+
+        }
 
         RLock lock = redissonClient.getLock(String.format(LOCK_FULL_SHORT_URL_KEY, fullShortUrl)); //加分布式锁,防止缓存击穿
         lock.lock();
@@ -99,6 +112,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             ShortLinkGotoDO gotoDO = gotoMapper.selectOne(queryWrapper);
             if(gotoDO == null) {
                 stringRedisTemplate.opsForValue().set(String.format(IS_NULL_FULL_SHORT_URL_KEY, fullShortUrl),"-");//如果数据库中不存在，为防止缓存穿透，设置一个特殊值
+                try {
+                    response.sendRedirect("/page/notfound");
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
                 return ;
             }
             LambdaQueryWrapper<ShortLinkDO> wrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
@@ -113,6 +131,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 try {
                     if(linkDO.getValidDate().isBefore(LocalDateTime.now())) {//短连接已经过期
                         stringRedisTemplate.opsForValue().set(String.format(IS_NULL_FULL_SHORT_URL_KEY, fullShortUrl),"-");
+                        try {
+                            response.sendRedirect("/page/notfound");
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                         return ;
                     }
                     long validTime = SetCacheTimeUtil.getLinkCacheExpirationSeconds(linkDO.getValidDate());
