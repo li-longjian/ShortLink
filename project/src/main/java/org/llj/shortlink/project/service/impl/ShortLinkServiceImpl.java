@@ -1,6 +1,5 @@
 package org.llj.shortlink.project.service.impl;
 
-
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -39,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.rmi.server.ServerCloneException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -107,8 +107,14 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .eq(ShortLinkDO::getEnableStatus, 0)
                     .eq(ShortLinkDO::getDelFlag, 0);
             ShortLinkDO linkDO = baseMapper.selectOne(wrapper);
+
+
             if(linkDO != null){
                 try {
+                    if(linkDO.getValidDate().isBefore(LocalDateTime.now())) {//短连接已经过期
+                        stringRedisTemplate.opsForValue().set(String.format(IS_NULL_FULL_SHORT_URL_KEY, fullShortUrl),"-");
+                        return ;
+                    }
                     long validTime = SetCacheTimeUtil.getLinkCacheExpirationSeconds(linkDO.getValidDate());
                     stringRedisTemplate.opsForValue().set(
                             String.format(FULL_SHORT_URL_KEY, fullShortUrl),
