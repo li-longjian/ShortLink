@@ -2,6 +2,8 @@ package org.llj.shortlink.project.dto.req;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class LinkCreateReqDTO {
     /**
@@ -32,6 +34,11 @@ public class LinkCreateReqDTO {
      * 有效期类型 0：永久有效 1：用户自定义
      */
     private int validDateType;
+
+    /**
+     * 短连接有效期
+     */
+    private LocalDateTime validDate;
 
 
     /**

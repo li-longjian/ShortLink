@@ -27,6 +27,7 @@ import org.llj.shortlink.project.dto.resp.LinkCreateRespDTO;
 import org.llj.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import org.llj.shortlink.project.service.ShortLinkService;
 import org.llj.shortlink.project.utils.HashUtil;
+import org.llj.shortlink.project.utils.SetCacheTimeUtil;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -41,9 +42,9 @@ import java.rmi.server.ServerCloneException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
-import static org.llj.shortlink.project.common.constant.RedisKey.FULL_SHORT_URL_KEY;
-import static org.llj.shortlink.project.common.constant.RedisKey.LOCK_FULL_SHORT_URL_KEY;
+import static org.llj.shortlink.project.common.constant.RedisKey.*;
 
 @Service
 @RequiredArgsConstructor
@@ -74,7 +75,14 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             }
 
         }
-        RLock lock = redissonClient.getLock(String.format(LOCK_FULL_SHORT_URL_KEY, fullShortUrl));
+        boolean contains = rBloomFilter.contains(fullShortUrl); //防止缓存穿透
+        if(!contains) {
+            return;
+        }
+        String goToIsNull = stringRedisTemplate.opsForValue().get(String.format(IS_NULL_FULL_SHORT_URL_KEY, fullShortUrl));
+        if(StringUtil.isNotBlank(goToIsNull)) return;
+
+        RLock lock = redissonClient.getLock(String.format(LOCK_FULL_SHORT_URL_KEY, fullShortUrl)); //加分布式锁,防止缓存击穿
         lock.lock();
         try{
            originalLink = stringRedisTemplate.opsForValue().get(String.format(FULL_SHORT_URL_KEY, fullShortUrl));
@@ -89,7 +97,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
                     .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
             ShortLinkGotoDO gotoDO = gotoMapper.selectOne(queryWrapper);
-            if(gotoDO == null) return;
+            if(gotoDO == null) {
+                stringRedisTemplate.opsForValue().set(String.format(IS_NULL_FULL_SHORT_URL_KEY, fullShortUrl),"-");//如果数据库中不存在，为防止缓存穿透，设置一个特殊值
+                return ;
+            }
             LambdaQueryWrapper<ShortLinkDO> wrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                     .eq(ShortLinkDO::getGid, gotoDO.getGid())
                     .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)
@@ -98,7 +109,13 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             ShortLinkDO linkDO = baseMapper.selectOne(wrapper);
             if(linkDO != null){
                 try {
-                    stringRedisTemplate.opsForValue().set(FULL_SHORT_URL_KEY,linkDO.getOriginUrl());
+                    long validTime = SetCacheTimeUtil.getLinkCacheExpirationSeconds(linkDO.getValidDate());
+                    stringRedisTemplate.opsForValue().set(
+                            String.format(FULL_SHORT_URL_KEY, fullShortUrl),
+                            linkDO.getOriginUrl(),
+                            validTime,
+                            TimeUnit.SECONDS
+                            );
                     response.sendRedirect(linkDO.getOriginUrl());
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -107,8 +124,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         }finally {
             lock.unlock();
         }
-
-
 
     }
     /**
@@ -134,6 +149,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .describe(linkCreateReqDTO.getDescribe())
                 .createdType(linkCreateReqDTO.getCreatedType())
                 .validDateType(linkCreateReqDTO.getValidDateType())
+                .validDate(linkCreateReqDTO.getValidDate())
                 .clickNum(0)
                 .build();
         ShortLinkGotoDO gotoDO = ShortLinkGotoDO.builder()
@@ -147,6 +163,13 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             log.warn("短链接:"+fullShortLinkUrl+" 重复入库");
             throw  new ServiceException("短链接重复");
         }
+        long validTime = SetCacheTimeUtil.getLinkCacheExpirationSeconds(linkCreateReqDTO.getValidDate());
+        stringRedisTemplate.opsForValue().set(
+                String.format(FULL_SHORT_URL_KEY, fullShortLinkUrl),
+                shortLinkDO.getOriginUrl(),
+                validTime,
+                TimeUnit.SECONDS
+                );
         return LinkCreateRespDTO.builder()
                 .fullShortUrl(shortLinkDO.getFullShortUrl())
                 .originUrl(shortLinkDO.getOriginUrl())
