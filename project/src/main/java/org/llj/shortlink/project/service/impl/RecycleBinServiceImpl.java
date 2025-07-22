@@ -15,6 +15,7 @@ import org.llj.shortlink.project.dao.entity.ShortLinkDO;
 import org.llj.shortlink.project.dao.mapper.GroupMapper;
 import org.llj.shortlink.project.dao.mapper.RecycleBinMapper;
 import org.llj.shortlink.project.dto.req.RecycleBinAddReqDTO;
+import org.llj.shortlink.project.dto.req.RecycleBinDeleteReqDTO;
 import org.llj.shortlink.project.dto.req.RecycleBinPageReqDTO;
 import org.llj.shortlink.project.dto.req.RecycleBinRecoverReqDTO;
 import org.llj.shortlink.project.dto.resp.ShortLinkPageRespDTO;
@@ -87,5 +88,15 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, ShortLi
                 .build();
         baseMapper.update(build,updateWrapper);
         stringRedisTemplate.delete(String.format(IS_NULL_FULL_SHORT_URL_KEY, recycleBinRecoverReqDTO.getFullShortUrl()));
+    }
+
+    @Override
+    public void deleteShortLink(RecycleBinDeleteReqDTO recycleBinDeleteReqDTO) {
+        val updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
+                .eq(ShortLinkDO::getGid, recycleBinDeleteReqDTO.getGid())
+                .eq(ShortLinkDO::getDelFlag, 0)
+                .eq(ShortLinkDO::getFullShortUrl, recycleBinDeleteReqDTO.getFullShortUrl())
+                .eq(ShortLinkDO::getEnableStatus, 1);
+        baseMapper.delete(updateWrapper);//配置了mp 的逻辑删除功能，并不是物理删除
     }
 }
