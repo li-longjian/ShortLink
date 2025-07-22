@@ -16,6 +16,7 @@ import org.llj.shortlink.project.dao.mapper.GroupMapper;
 import org.llj.shortlink.project.dao.mapper.RecycleBinMapper;
 import org.llj.shortlink.project.dto.req.RecycleBinAddReqDTO;
 import org.llj.shortlink.project.dto.req.RecycleBinPageReqDTO;
+import org.llj.shortlink.project.dto.req.RecycleBinRecoverReqDTO;
 import org.llj.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import org.llj.shortlink.project.service.RecycleBinService;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.llj.shortlink.project.common.constant.RedisKey.FULL_SHORT_URL_KEY;
+import static org.llj.shortlink.project.common.constant.RedisKey.IS_NULL_FULL_SHORT_URL_KEY;
 
 @Service
 @RequiredArgsConstructor
@@ -71,5 +73,19 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, ShortLi
         Page<ShortLinkDO> page = new Page<>(recycleBinPageReqDTO.getCurrent(), recycleBinPageReqDTO.getSize());
         IPage<ShortLinkDO> pageResults = baseMapper.selectPage(page, queryWrapper);
         return pageResults.convert(res -> BeanUtil.toBean(res, ShortLinkPageRespDTO.class));
+    }
+
+    @Override
+    public void recoverShortLink(RecycleBinRecoverReqDTO recycleBinRecoverReqDTO) {
+        val updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
+                .eq(ShortLinkDO::getGid, recycleBinRecoverReqDTO.getGid())
+                .eq(ShortLinkDO::getDelFlag, 0)
+                .eq(ShortLinkDO::getFullShortUrl, recycleBinRecoverReqDTO.getFullShortUrl())
+                .eq(ShortLinkDO::getEnableStatus, 1);
+        ShortLinkDO build = ShortLinkDO.builder()
+                .enableStatus(0)//设置短连接关闭状态 0：开启， 1：关闭
+                .build();
+        baseMapper.update(build,updateWrapper);
+        stringRedisTemplate.delete(String.format(IS_NULL_FULL_SHORT_URL_KEY, recycleBinRecoverReqDTO.getFullShortUrl()));
     }
 }
