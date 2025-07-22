@@ -66,6 +66,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      * @param request
      * @param response
      */
+    @SneakyThrows
     @Override
     public void reStoreUrl(String shortUri, HttpServletRequest request, HttpServletResponse response) {
         String serverName = request.getServerName();
@@ -83,22 +84,13 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         }
         boolean contains = rBloomFilter.contains(fullShortUrl); //防止缓存穿透
         if(!contains) {
-            try {
-                response.sendRedirect("/page/notfound");
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            response.sendRedirect("/page/notfound");
             return;
         }
         String goToIsNull = stringRedisTemplate.opsForValue().get(String.format(IS_NULL_FULL_SHORT_URL_KEY, fullShortUrl));
         if(StringUtil.isNotBlank(goToIsNull)) {
-            try {
-                response.sendRedirect("/page/notfound");
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            response.sendRedirect("/page/notfound");
             return;
-
         }
 
         RLock lock = redissonClient.getLock(String.format(LOCK_FULL_SHORT_URL_KEY, fullShortUrl)); //加分布式锁,防止缓存击穿
@@ -106,23 +98,15 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         try{
            originalLink = stringRedisTemplate.opsForValue().get(String.format(FULL_SHORT_URL_KEY, fullShortUrl));
             if(StringUtil.isNotBlank(originalLink)) {
-                try{
-                    response.sendRedirect(originalLink);
-                    return;
-                }catch (IOException e){
-                    e.printStackTrace();
-                }
+                response.sendRedirect(originalLink);
+                return;
             }
             LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
                     .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
             ShortLinkGotoDO gotoDO = gotoMapper.selectOne(queryWrapper);
             if(gotoDO == null) {
                 stringRedisTemplate.opsForValue().set(String.format(IS_NULL_FULL_SHORT_URL_KEY, fullShortUrl),"-");//如果数据库中不存在，为防止缓存穿透，设置一个特殊值
-                try {
-                    response.sendRedirect("/page/notfound");
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                response.sendRedirect("/page/notfound");
                 return ;
             }
             LambdaQueryWrapper<ShortLinkDO> wrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
@@ -132,30 +116,19 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .eq(ShortLinkDO::getDelFlag, 0);
             ShortLinkDO linkDO = baseMapper.selectOne(wrapper);
 
-
-            if(linkDO != null){
-                try {
-                    if(linkDO.getValidDate().isBefore(LocalDateTime.now())) {//短连接已经过期
-                        stringRedisTemplate.opsForValue().set(String.format(IS_NULL_FULL_SHORT_URL_KEY, fullShortUrl),"-");
-                        try {
-                            response.sendRedirect("/page/notfound");
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                        return ;
-                    }
-                    long validTime = SetCacheTimeUtil.getLinkCacheExpirationSeconds(linkDO.getValidDate());
-                    stringRedisTemplate.opsForValue().set(
-                            String.format(FULL_SHORT_URL_KEY, fullShortUrl),
-                            linkDO.getOriginUrl(),
-                            validTime,
-                            TimeUnit.SECONDS
-                            );
-                    response.sendRedirect(linkDO.getOriginUrl());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+            if(linkDO == null || (linkDO.getValidDate() != null && linkDO.getValidDate().isBefore(LocalDateTime.now()))){//短连接已经过期
+                stringRedisTemplate.opsForValue().set(String.format(IS_NULL_FULL_SHORT_URL_KEY, fullShortUrl),"-");
+                response.sendRedirect("/page/notfound");
+                return ;
             }
+            long validTime = SetCacheTimeUtil.getLinkCacheExpirationSeconds(linkDO.getValidDate());
+            stringRedisTemplate.opsForValue().set(
+                    String.format(FULL_SHORT_URL_KEY, fullShortUrl),
+                    linkDO.getOriginUrl(),
+                    validTime,
+                    TimeUnit.SECONDS
+            );
+            response.sendRedirect(linkDO.getOriginUrl());
         }finally {
             lock.unlock();
         }

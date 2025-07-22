@@ -1,0 +1,27 @@
+package org.llj.shortlink.project.controller;
+
+import lombok.RequiredArgsConstructor;
+import org.llj.shortlink.project.common.convention.result.Result;
+import org.llj.shortlink.project.common.convention.result.Results;
+import org.llj.shortlink.project.dto.req.RecycleBinAddReqDTO;
+import org.llj.shortlink.project.service.RecycleBinService;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequiredArgsConstructor
+public class RecycleBinController {
+    private final RecycleBinService recycleBinService;
+
+    /**
+     * 短连接回收到回收站
+     * @param recycleBinAddReqDTO
+     * @return
+     */
+    @PostMapping("/api/shortlink/v1/recycle-bin/add")
+    public Result<Void> addLinkToRecycleBin(@RequestBody RecycleBinAddReqDTO recycleBinAddReqDTO) {
+        recycleBinService.addToRecycleBin(recycleBinAddReqDTO);
+        return Results.success();
+    }
+}
