@@ -14,8 +14,14 @@ spring:
       suffix: .html
 server:
   port: 8001
-
-
+#配置Mybatis-plus 逻辑删除功能
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: delFlag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      id-type: auto
 logging:
     level:
         org.springframework.ai: debug
