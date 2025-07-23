@@ -3,6 +3,7 @@ package org.llj.shortlink.project.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.Week;
+import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -11,6 +12,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import groovy.util.logging.Slf4j;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jodd.util.StringUtil;
@@ -49,11 +51,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.rmi.server.ServerCloneException;
 import java.time.LocalDateTime;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.llj.shortlink.project.common.constant.RedisKey.*;
 
@@ -147,6 +147,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      * @return
      */
     @Override
+    @Transactional(propagation = Propagation.REQUIRED)
     public LinkCreateRespDTO createShortLink(LinkCreateReqDTO linkCreateReqDTO) {
         String shortLinkSuffix = generateLinkSuffix(linkCreateReqDTO);
         String fullShortLinkUrl = linkCreateReqDTO.getDomain() + '/' + shortLinkSuffix;
@@ -318,26 +319,57 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     }
 
     private void shortLinkStats(String fullShortUrl,String gid,HttpServletRequest request, HttpServletResponse response){
-        if(StrUtil.isBlank(gid)){
-            LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
-                    .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
-            ShortLinkGotoDO gotoDO = gotoMapper.selectOne(queryWrapper);
-            gid = gotoDO.getGid();
+        AtomicBoolean uvFirstFlag = new AtomicBoolean();
+        Cookie[] cookies = request.getCookies();
+        // 构建Redis键名（保留页面路径信息）
+        String redisUvKey = Redis_UV_KEY + fullShortUrl;
+        Runnable addCookieTask = () ->{
+            String uv = UUID.randomUUID().toString();
+            Cookie cookie = new Cookie("uv",uv);
+            cookie.setPath(StrUtil.sub(fullShortUrl,fullShortUrl.indexOf('/'),fullShortUrl.length()));
+            cookie.setMaxAge(30 * 24 * 60 * 60);
+            response.addCookie(cookie);
+            uvFirstFlag.set(true);
+            stringRedisTemplate.opsForSet().add(redisUvKey, uv);
+        };
+        try {
+            if(ArrayUtil.isNotEmpty(cookies)){
+                Arrays.stream(cookies)
+                        .filter(each -> Objects.equals(each.getName(),"uv"))
+                        .findFirst()
+                        .map(Cookie::getValue)
+                        .ifPresentOrElse(each ->{
+                            Long add = stringRedisTemplate.opsForSet().add(redisUvKey, each);
+                            uvFirstFlag.set(add != null && add > 0); //true : 第一次访问这个页面, false : 不是第一次访问页面
+
+                        }, addCookieTask);
+            }else{
+                addCookieTask.run();
+            }
+            if(StrUtil.isBlank(gid)){
+                LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
+                        .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
+                ShortLinkGotoDO gotoDO = gotoMapper.selectOne(queryWrapper);
+                gid = gotoDO.getGid();
+            }
+            Date now = new Date();
+            int hour = DateUtil.hour(now,true);
+            Week week = DateUtil.dayOfWeekEnum(now);
+            int weekValue = week.getIso8601Value();
+            ShortLinkStatsDO statsDO = ShortLinkStatsDO.builder()
+                    .gid(gid)
+                    .fullShortUrl(fullShortUrl)
+                    .pv(1)
+                    .uv(uvFirstFlag.get() ? 1 : 0) //uvFlag true: 第一次访问+1， 否则为0
+                    .uip(1)
+                    .hour(hour)
+                    .weekday(weekValue)
+                    .date(now)
+                    .build();
+            shortLinkStatsMapper.shortLinkStats(statsDO);
+        } catch (Exception e){
+           throw new RuntimeException(e);
         }
-        Date now = new Date();
-        int hour = DateUtil.hour(now,true);
-        Week week = DateUtil.dayOfWeekEnum(now);
-        int weekValue = week.getIso8601Value();
-        ShortLinkStatsDO statsDO = ShortLinkStatsDO.builder()
-                .gid(gid)
-                .fullShortUrl(fullShortUrl)
-                .pv(1)
-                .uv(1)
-                .uip(1)
-                .hour(hour)
-                .weekday(weekValue)
-                .date(now)
-                .build();
-        shortLinkStatsMapper.shortLinkStats(statsDO);
+
     }
 }
