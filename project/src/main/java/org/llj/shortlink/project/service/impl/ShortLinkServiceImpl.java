@@ -54,6 +54,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.llj.shortlink.project.common.constant.LinkConstant.AMP_URL;
 import static org.llj.shortlink.project.common.constant.RedisKey.*;
@@ -70,7 +71,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkLocateStatsMapper linkLocateStatsMapper;
     private final LinkOSStatsMapper linkOSStatsMapper;
     private final LinkBrowserStatsMapper linkBrowserStatsMapper;
-
+    private final LinkAccessLogsMapper linkAccessLogsMapper;
 
     private  final String AMAP_KEY = "c1ce6eed90ea948651c4ad0ae6793cdc";
     /**
@@ -336,14 +337,18 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         // 构建Redis键名（保留页面路径信息）
         String redisUvKey = REDIS_UV_KEY + fullShortUrl;
         String redisUipKey = REDIS_UIP_KEY +fullShortUrl;
+
+        AtomicReference<String> uv = new AtomicReference<>();
+
         Runnable addCookieTask = () ->{
-            String uv = UUID.randomUUID().toString();
-            Cookie cookie = new Cookie("uv",uv);
+            String uv_value = UUID.randomUUID().toString();
+            uv.set(uv_value);
+            Cookie cookie = new Cookie("uv",uv.get());
             cookie.setPath(StrUtil.sub(fullShortUrl,fullShortUrl.indexOf('/'),fullShortUrl.length()));
             cookie.setMaxAge(30 * 24 * 60 * 60);
             response.addCookie(cookie);
             uvFirstFlag.set(true);
-            stringRedisTemplate.opsForSet().add(redisUvKey, uv);
+            stringRedisTemplate.opsForSet().add(redisUvKey, uv.get());
         };
         try {
             if(ArrayUtil.isNotEmpty(cookies)){
@@ -352,6 +357,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .findFirst()
                         .map(Cookie::getValue)
                         .ifPresentOrElse(each ->{
+                            uv.set(each);
                             Long UVAdd = stringRedisTemplate.opsForSet().add(redisUvKey, each);
                             uvFirstFlag.set(UVAdd != null && UVAdd > 0); //true : 第一次访问这个页面, false : 不是第一次访问页面
 
@@ -420,26 +426,43 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             /**
              * 更新操作系统
              */
+            String os = LinkUtil.getOs(request);
             LinkOSStatsDO osStatsDO = LinkOSStatsDO.builder()
                     .fullShortUrl(fullShortUrl)
                     .gid(gid)
                     .cnt(1)
                     .date(new Date())
-                    .os(LinkUtil.getOs(request))
+                    .os(os)
                     .build();
             linkOSStatsMapper.LinkOsStats(osStatsDO);
 
             /**
              * 更新浏览器信息
              */
+            String browser = LinkUtil.getBrowser(request);
             LinkBrowserStatsDO browserStatsDO = LinkBrowserStatsDO.builder()
                     .fullShortUrl(fullShortUrl)
                     .gid(gid)
                     .cnt(1)
                     .date(new Date())
-                    .browser(LinkUtil.getBrowser(request))
+                    .browser(browser)
                     .build();
             linkBrowserStatsMapper.LinkBrowserStats(browserStatsDO);
+
+            /**
+             * 更新日志
+             *
+             */
+            LinkAccessLogDO accessLogDO = LinkAccessLogDO.builder()
+                    .gid(gid)
+                    .fullShortUrl(fullShortUrl)
+                    .ip(ip)
+                    .os(os)
+                    .browser(browser)
+                    .user(uv.get())
+                    .build();
+            linkAccessLogsMapper.LinkAccessLogs(accessLogDO);
+
         } catch (Exception e){
            throw new RuntimeException(e);
         }
