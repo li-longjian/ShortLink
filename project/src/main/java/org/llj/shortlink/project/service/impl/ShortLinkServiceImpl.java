@@ -72,7 +72,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkOSStatsMapper linkOSStatsMapper;
     private final LinkBrowserStatsMapper linkBrowserStatsMapper;
     private final LinkAccessLogsMapper linkAccessLogsMapper;
-
+    private final LinkDeviceStatsMapper linkDeviceStatsMapper;
     private  final String AMAP_KEY = "c1ce6eed90ea948651c4ad0ae6793cdc";
     /**
      * 短连接跳转源链接
@@ -463,6 +463,14 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .build();
             linkAccessLogsMapper.LinkAccessLogs(accessLogDO);
 
+            LinkDeviceStatsDO linkDeviceStatsDO = LinkDeviceStatsDO.builder()
+                    .device(LinkUtil.getDevice((request)))
+                    .cnt(1)
+                    .gid(gid)
+                    .fullShortUrl(fullShortUrl)
+                    .date(new Date())
+                    .build();
+            linkDeviceStatsMapper.LinkDeviceStats(linkDeviceStatsDO);
         } catch (Exception e){
            throw new RuntimeException(e);
         }
