@@ -69,6 +69,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final ShortLinkStatsMapper shortLinkStatsMapper;
     private final LinkLocateStatsMapper linkLocateStatsMapper;
     private final LinkOSStatsMapper linkOSStatsMapper;
+    private final LinkBrowserStatsMapper linkBrowserStatsMapper;
 
 
     private  final String AMAP_KEY = "c1ce6eed90ea948651c4ad0ae6793cdc";
@@ -427,6 +428,18 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .os(LinkUtil.getOs(request))
                     .build();
             linkOSStatsMapper.LinkOsStats(osStatsDO);
+
+            /**
+             * 更新浏览器信息
+             */
+            LinkBrowserStatsDO browserStatsDO = LinkBrowserStatsDO.builder()
+                    .fullShortUrl(fullShortUrl)
+                    .gid(gid)
+                    .cnt(1)
+                    .date(new Date())
+                    .browser(LinkUtil.getBrowser(request))
+                    .build();
+            linkBrowserStatsMapper.LinkBrowserStats(browserStatsDO);
         } catch (Exception e){
            throw new RuntimeException(e);
         }
