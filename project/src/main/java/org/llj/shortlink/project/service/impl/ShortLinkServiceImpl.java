@@ -26,14 +26,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.llj.shortlink.project.common.Exception.ClientException;
 import org.llj.shortlink.project.common.Exception.ServiceException;
-import org.llj.shortlink.project.dao.entity.LinkLocateStatsDO;
-import org.llj.shortlink.project.dao.entity.ShortLinkDO;
-import org.llj.shortlink.project.dao.entity.ShortLinkGotoDO;
-import org.llj.shortlink.project.dao.entity.ShortLinkStatsDO;
-import org.llj.shortlink.project.dao.mapper.LinkLocateStatsMapper;
-import org.llj.shortlink.project.dao.mapper.ShortLinkGotoMapper;
-import org.llj.shortlink.project.dao.mapper.ShortLinkMapper;
-import org.llj.shortlink.project.dao.mapper.ShortLinkStatsMapper;
+import org.llj.shortlink.project.dao.entity.*;
+import org.llj.shortlink.project.dao.mapper.*;
 import org.llj.shortlink.project.dto.req.LinkCreateReqDTO;
 import org.llj.shortlink.project.dto.req.LinkUpdateReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkPageReqDTO;
@@ -74,8 +68,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final RedissonClient redissonClient;
     private final ShortLinkStatsMapper shortLinkStatsMapper;
     private final LinkLocateStatsMapper linkLocateStatsMapper;
+    private final LinkOSStatsMapper linkOSStatsMapper;
 
-    //@Value("${shortlink.api.amap-key")
+
     private  final String AMAP_KEY = "c1ce6eed90ea948651c4ad0ae6793cdc";
     /**
      * 短连接跳转源链接
@@ -85,6 +80,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      */
     @SneakyThrows
     @Override
+    @Transactional(propagation = Propagation.REQUIRED)
     public void reStoreUrl(String shortUri, HttpServletRequest request, HttpServletResponse response) {
         String serverName = request.getServerName();
         String scheme = request.getScheme();
@@ -329,7 +325,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         return null;
     }
 
-    private void shortLinkStats(String fullShortUrl,String gid,HttpServletRequest request, HttpServletResponse response){
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    protected void shortLinkStats(String fullShortUrl, String gid, HttpServletRequest request, HttpServletResponse response){
         AtomicBoolean uvFirstFlag = new AtomicBoolean();
         Cookie[] cookies = request.getCookies();
 
@@ -418,7 +416,17 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .build();
             shortLinkStatsMapper.shortLinkStats(statsDO);//更新uv，PV，uip
             linkLocateStatsMapper.add(locateStatsDO);//更新省份，地区
-
+            /**
+             * 更新操作系统
+             */
+            LinkOSStatsDO osStatsDO = LinkOSStatsDO.builder()
+                    .fullShortUrl(fullShortUrl)
+                    .gid(gid)
+                    .cnt(1)
+                    .date(new Date())
+                    .os(LinkUtil.getOs(request))
+                    .build();
+            linkOSStatsMapper.LinkOsStats(osStatsDO);
         } catch (Exception e){
            throw new RuntimeException(e);
         }

@@ -5,26 +5,20 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.llj.shortlink.project.common.dataBase.BaseDO;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@TableName("t_link_locate_stats")
-public class LinkLocateStatsDO {
+@TableName("t_link_os_stats")
+public class LinkOSStatsDO extends BaseDO {
     private Long id;
     private String fullShortUrl;
     private String gid;
     private Date date;
     private Integer cnt;
-    private String province;
-    private String city;
-    private String adcode;
-    private String country;
-    private LocalDateTime createTime;
-    private LocalDateTime updateTime;
-    private Integer delFlag;
+    private String os;
 }
