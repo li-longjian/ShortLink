@@ -24,6 +24,10 @@ mybatis-plus:
       logic-delete-value: 1
       logic-not-delete-value: 0
       id-type: auto
+
+shortlink:
+  api:
+    amap-key: c1ce6eed90ea948651c4ad0ae6793cdc
 logging:
     level:
         org.springframework.ai: debug

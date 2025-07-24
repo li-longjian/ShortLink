@@ -5,6 +5,9 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.Week;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.http.HttpUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -23,9 +26,11 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.llj.shortlink.project.common.Exception.ClientException;
 import org.llj.shortlink.project.common.Exception.ServiceException;
+import org.llj.shortlink.project.dao.entity.LinkLocateStatsDO;
 import org.llj.shortlink.project.dao.entity.ShortLinkDO;
 import org.llj.shortlink.project.dao.entity.ShortLinkGotoDO;
 import org.llj.shortlink.project.dao.entity.ShortLinkStatsDO;
+import org.llj.shortlink.project.dao.mapper.LinkLocateStatsMapper;
 import org.llj.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import org.llj.shortlink.project.dao.mapper.ShortLinkMapper;
 import org.llj.shortlink.project.dao.mapper.ShortLinkStatsMapper;
@@ -37,6 +42,7 @@ import org.llj.shortlink.project.dto.resp.LinkCreateRespDTO;
 import org.llj.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import org.llj.shortlink.project.service.ShortLinkService;
 import org.llj.shortlink.project.utils.HashUtil;
+import org.llj.shortlink.project.utils.LinkUtil;
 import org.llj.shortlink.project.utils.SetCacheTimeUtil;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
@@ -55,6 +61,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.llj.shortlink.project.common.constant.LinkConstant.AMP_URL;
 import static org.llj.shortlink.project.common.constant.RedisKey.*;
 
 @Service
@@ -66,6 +73,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final StringRedisTemplate stringRedisTemplate;
     private final RedissonClient redissonClient;
     private final ShortLinkStatsMapper shortLinkStatsMapper;
+    private final LinkLocateStatsMapper linkLocateStatsMapper;
+
+    //@Value("${shortlink.api.amap-key")
+    private  final String AMAP_KEY = "c1ce6eed90ea948651c4ad0ae6793cdc";
     /**
      * 短连接跳转源链接
      * @param shortUri
@@ -321,8 +332,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private void shortLinkStats(String fullShortUrl,String gid,HttpServletRequest request, HttpServletResponse response){
         AtomicBoolean uvFirstFlag = new AtomicBoolean();
         Cookie[] cookies = request.getCookies();
+
+
         // 构建Redis键名（保留页面路径信息）
-        String redisUvKey = Redis_UV_KEY + fullShortUrl;
+        String redisUvKey = REDIS_UV_KEY + fullShortUrl;
+        String redisUipKey = REDIS_UIP_KEY +fullShortUrl;
         Runnable addCookieTask = () ->{
             String uv = UUID.randomUUID().toString();
             Cookie cookie = new Cookie("uv",uv);
@@ -339,19 +353,29 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .findFirst()
                         .map(Cookie::getValue)
                         .ifPresentOrElse(each ->{
-                            Long add = stringRedisTemplate.opsForSet().add(redisUvKey, each);
-                            uvFirstFlag.set(add != null && add > 0); //true : 第一次访问这个页面, false : 不是第一次访问页面
+                            Long UVAdd = stringRedisTemplate.opsForSet().add(redisUvKey, each);
+                            uvFirstFlag.set(UVAdd != null && UVAdd > 0); //true : 第一次访问这个页面, false : 不是第一次访问页面
 
                         }, addCookieTask);
             }else{
                 addCookieTask.run();
             }
+            /**
+             * 获取请求的ip地址,统计uip
+             */
+            String ip = LinkUtil.getIP(request);
+            Long UIPAdd = stringRedisTemplate.opsForSet().add(redisUipKey,ip);
+            boolean uipFirstFlag = UIPAdd != null && UIPAdd > 0;
+
             if(StrUtil.isBlank(gid)){
                 LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
                         .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
                 ShortLinkGotoDO gotoDO = gotoMapper.selectOne(queryWrapper);
                 gid = gotoDO.getGid();
             }
+            /**
+             * 获取时间日期等信息
+             */
             Date now = new Date();
             int hour = DateUtil.hour(now,true);
             Week week = DateUtil.dayOfWeekEnum(now);
@@ -361,12 +385,40 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .fullShortUrl(fullShortUrl)
                     .pv(1)
                     .uv(uvFirstFlag.get() ? 1 : 0) //uvFlag true: 第一次访问+1， 否则为0
-                    .uip(1)
+                    .uip(uipFirstFlag ? 1 : 0)
                     .hour(hour)
                     .weekday(weekValue)
                     .date(now)
                     .build();
-            shortLinkStatsMapper.shortLinkStats(statsDO);
+
+            //调用高德地图API获取定位信息
+            Map<String, Object> apiRequestParam = new HashMap<>();
+            apiRequestParam.put("ip",ip);
+            apiRequestParam.put("key",AMAP_KEY);
+            String result = HttpUtil.get(AMP_URL, apiRequestParam);
+            JSONObject locateObject = JSON.parseObject(result);
+            String infocode = locateObject.getString("infocode");
+            String province = locateObject.getString("province");
+            String city = locateObject.getString("city");
+            String adcode = locateObject.getString("adcode");
+            if(StrUtil.isBlank(infocode) || !StrUtil.equals("10000",infocode)) {
+                province = "未知地区";
+                city = "未知地区";
+                adcode = "未知";
+            }
+            LinkLocateStatsDO locateStatsDO = LinkLocateStatsDO.builder()
+                    .cnt(1)
+                    .country("中国")
+                    .gid(gid)
+                    .adcode(adcode)
+                    .province(province)
+                    .city(city)
+                    .date(new Date())
+                    .fullShortUrl(fullShortUrl)
+                    .build();
+            shortLinkStatsMapper.shortLinkStats(statsDO);//更新uv，PV，uip
+            linkLocateStatsMapper.add(locateStatsDO);//更新省份，地区
+
         } catch (Exception e){
            throw new RuntimeException(e);
         }
