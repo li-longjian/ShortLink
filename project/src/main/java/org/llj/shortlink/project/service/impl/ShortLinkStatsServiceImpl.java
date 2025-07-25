@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
 import org.llj.shortlink.project.dao.entity.*;
 import org.llj.shortlink.project.dao.mapper.*;
+import org.llj.shortlink.project.dto.req.LinkAccessGroupRecodeReqDTO;
 import org.llj.shortlink.project.dto.req.LinkAccessRecodeReqDTO;
 import org.llj.shortlink.project.dto.req.LinkStatsGroupReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkStatsReqDTO;
@@ -411,6 +412,45 @@ public class ShortLinkStatsServiceImpl  implements ShortLinkStatsService {
                 .networkStats(networkStats)
                 .build();
     }
+
+    /**
+     * 分组访问记录分页查询
+     * @param requestParam
+     * @return
+     */
+    @Override
+    public IPage<LinkAccessRecodeRespDTO> linkAccessGroupStatsPage(LinkAccessGroupRecodeReqDTO requestParam) {
+        LambdaQueryWrapper<LinkAccessLogDO> queryWrapper = Wrappers.lambdaQuery(LinkAccessLogDO.class)
+                .eq(LinkAccessLogDO::getGid, requestParam.getGid())
+                .eq(LinkAccessLogDO::getDelFlag, 0)
+                .between(LinkAccessLogDO::getCreateTime,requestParam.getStartDate(),requestParam.getEndDate())
+                .orderByDesc(LinkAccessLogDO::getCreateTime);
+        IPage<LinkAccessLogDO> linkAccessLogPage = linkAccessLogsMapper.selectPage(requestParam, queryWrapper);
+        IPage<LinkAccessRecodeRespDTO> resultPage = linkAccessLogPage.convert(each -> BeanUtil.toBean(each, LinkAccessRecodeRespDTO.class));
+        List<String> uvList = resultPage.getRecords().stream()
+                .map(LinkAccessRecodeRespDTO::getUser)
+                .toList();//得到了结果集中用户列表, 为了下一步判断此用户是新用户或者老用户
+
+        /**
+         * 得到用户类型：新访客，旧访客
+         */
+        List<HashMap<String, Object>> uvTypeInfo = linkAccessLogsMapper.findGroupUvTypeByUser(
+                requestParam.getGid(),
+                requestParam.getStartDate(),
+                requestParam.getEndDate(),
+                uvList
+        );
+        resultPage.getRecords().forEach(each -> {
+            String uvType = uvTypeInfo.stream()
+                    .filter(item -> ObjectUtil.equal(each.getUser(), item.get("user")))
+                    .findFirst()
+                    .map(item -> item.get("uvType").toString())
+                    .orElse("旧访客");
+            each.setUvType(uvType);
+        });
+        return resultPage;
+    }
+
     /**
      * 访问记录分页查询
      * @param requestParam

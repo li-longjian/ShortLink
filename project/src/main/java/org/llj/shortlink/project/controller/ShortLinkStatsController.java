@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.RequiredArgsConstructor;
 import org.llj.shortlink.project.common.convention.result.Result;
 import org.llj.shortlink.project.common.convention.result.Results;
+import org.llj.shortlink.project.dto.req.LinkAccessGroupRecodeReqDTO;
 import org.llj.shortlink.project.dto.req.LinkAccessRecodeReqDTO;
 import org.llj.shortlink.project.dto.req.LinkStatsGroupReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkStatsReqDTO;
@@ -41,5 +42,15 @@ public class ShortLinkStatsController {
     @GetMapping("/api/shortlink/v1/stats-recode")
     public Result<IPage<LinkAccessRecodeRespDTO>> shortLinkAccessRecodePage(LinkAccessRecodeReqDTO requestParam) {
         return Results.success(shortLinkStatsService.linkAccessStatsPage(requestParam));
+    }
+
+    /**
+     * 指定时间内，访问记录分组数据
+     * @param requestParam
+     * @return
+     */
+    @GetMapping("/api/shortlink/v1/stats-recode/group")
+    public Result<IPage<LinkAccessRecodeRespDTO>> shortLinkAccessRecodePage(LinkAccessGroupRecodeReqDTO requestParam) {
+        return Results.success(shortLinkStatsService.linkAccessGroupStatsPage(requestParam));
     }
 }

@@ -128,6 +128,39 @@ public interface LinkAccessLogsMapper extends BaseMapper<LinkAccessLogDO> {
     )
     List<HashMap<String, Object>> findUvTypeByUser(@Param("gid")String gid,@Param("fullShortUrl")String fullShortUrl,@Param("startDate")String startDate,@Param("endDate")String endDate,@Param("userList")List<String> userList);
 
+    /**
+     * 分组
+     * 使用用户信息通过日志创建时间判断是否为新访客或者旧访客
+     * @param gid
+     *
+     * @param startDate
+     * @param endDate
+     * @param userList
+     * @return
+     */
+    @Select("<script> " +
+            "SELECT " +
+            "    user, " +
+            "    CASE " +
+            "        WHEN MIN(create_time) BETWEEN #{startDate} AND #{endDate} THEN '新访客' " +
+            "        ELSE '老访客' " +
+            "    END AS uvType " +
+            "FROM " +
+            "    t_link_access_logs " +
+            "WHERE " +
+            "    gid = #{gid} " +
+            "    AND user IN " +
+            "    <foreach item='item' index='index' collection='userList' open='(' separator=',' close=')'> " +
+            "        #{item} " +
+            "    </foreach> " +
+            "GROUP BY " +
+            "    user;" +
+            "    </script>"
+    )
+    List<HashMap<String, Object>> findGroupUvTypeByUser(@Param("gid")String gid,@Param("startDate")String startDate,@Param("endDate") String endDate,@Param("userList")List<String> userList);
+
+
+
     @Select("select count(user) as pv, count(distinct  user) as uv, count(distinct  ip ) as uip\n " +
             "from t_link_access_logs\n " +
             "where gid = #{gid} and full_short_url = #{fullShortUrl} and create_time between #{startDate} and #{endDate}\n " +
