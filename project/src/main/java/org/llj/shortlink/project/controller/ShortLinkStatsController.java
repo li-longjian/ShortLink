@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.llj.shortlink.project.common.convention.result.Result;
 import org.llj.shortlink.project.common.convention.result.Results;
 import org.llj.shortlink.project.dto.req.LinkAccessRecodeReqDTO;
+import org.llj.shortlink.project.dto.req.LinkStatsGroupReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkStatsReqDTO;
 import org.llj.shortlink.project.dto.resp.LinkAccessRecodeRespDTO;
 import org.llj.shortlink.project.dto.resp.ShortLinkStatsRespDTO;
@@ -22,6 +23,14 @@ public class ShortLinkStatsController {
     @GetMapping("/api/shortlink/v1/stats")
     public Result<ShortLinkStatsRespDTO> shortLinkStats(ShortLinkStatsReqDTO requestParam) {
         return Results.success(shortLinkStatsService.oneShortLinkStats(requestParam));
+    }
+
+    /**
+     * 访问短链接分组指定时间内监控数据
+     */
+    @GetMapping("/api/shortlink/v1/stats/group")
+    public Result<ShortLinkStatsRespDTO> shortLinkGroupStats(LinkStatsGroupReqDTO requestParam) {
+        return Results.success(shortLinkStatsService.groupShortLinkStats(requestParam));
     }
 
     /**

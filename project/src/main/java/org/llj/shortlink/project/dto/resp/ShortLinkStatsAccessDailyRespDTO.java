@@ -2,6 +2,7 @@ package org.llj.shortlink.project.dto.resp;
 
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Builder;
 import lombok.Data;
 
 import java.util.Date;
@@ -10,6 +11,7 @@ import java.util.Date;
  * 短链接基础访问监控响应参数
  */
 @Data
+@Builder
 public class ShortLinkStatsAccessDailyRespDTO {
 
     /**

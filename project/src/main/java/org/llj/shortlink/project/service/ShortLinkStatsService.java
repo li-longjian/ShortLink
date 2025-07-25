@@ -3,6 +3,7 @@ package org.llj.shortlink.project.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.llj.shortlink.project.dto.req.LinkAccessRecodeReqDTO;
+import org.llj.shortlink.project.dto.req.LinkStatsGroupReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkStatsReqDTO;
 import org.llj.shortlink.project.dto.resp.LinkAccessRecodeRespDTO;
 import org.llj.shortlink.project.dto.resp.ShortLinkStatsRespDTO;
@@ -17,4 +18,6 @@ public interface ShortLinkStatsService {
     ShortLinkStatsRespDTO oneShortLinkStats(ShortLinkStatsReqDTO requestParam);
 
     IPage<LinkAccessRecodeRespDTO> linkAccessStatsPage(LinkAccessRecodeReqDTO requestParam);
+
+    ShortLinkStatsRespDTO groupShortLinkStats(LinkStatsGroupReqDTO requestParam);
 }
