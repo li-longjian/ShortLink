@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.llj.shortlink.project.dao.entity.LinkAccessLogDO;
+import org.llj.shortlink.project.dao.entity.ShortLinkStatsDO;
 import org.llj.shortlink.project.dto.req.ShortLinkStatsReqDTO;
 
 import java.util.HashMap;
@@ -91,4 +92,11 @@ public interface LinkAccessLogsMapper extends BaseMapper<LinkAccessLogDO> {
             "    </script>"
     )
     List<HashMap<String, Object>> findUvTypeByUser(@Param("gid")String gid,@Param("fullShortUrl")String fullShortUrl,@Param("startDate")String startDate,@Param("endDate")String endDate,@Param("userList")List<String> userList);
+
+    @Select("select count(user) as pv, count(distinct  user) as uv, count(distinct  ip ) as uip\n " +
+            "from t_link_access_logs\n " +
+            "where gid = #{gid} and full_short_url = #{fullShortUrl} and create_time between #{startDate} and #{endDate}\n " +
+            "group by full_short_url,gid")
+    ShortLinkStatsDO findPvUvUipByShortLink(ShortLinkStatsReqDTO requestParam);
+
 }

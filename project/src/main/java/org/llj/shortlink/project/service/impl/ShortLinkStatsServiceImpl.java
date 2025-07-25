@@ -1,6 +1,7 @@
 package org.llj.shortlink.project.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -40,6 +41,10 @@ public class ShortLinkStatsServiceImpl  implements ShortLinkStatsService {
     public ShortLinkStatsRespDTO oneShortLinkStats(ShortLinkStatsReqDTO requestParam) {
         //1. 基础访问详情
         List<ShortLinkStatsDO> shortLinkStatsDOS = shortLinkStatsMapper.listStatsByShortLink(requestParam);
+        if(CollUtil.isEmpty(shortLinkStatsDOS)) return null;
+        //基础访问数据
+        ShortLinkStatsDO pvUvUipByShortLink = linkAccessLogsMapper.findPvUvUipByShortLink(requestParam);
+
         //2. 地区详情
 
         //get the detail info of one link in a province
@@ -187,6 +192,9 @@ public class ShortLinkStatsServiceImpl  implements ShortLinkStatsService {
 
         return ShortLinkStatsRespDTO
                 .builder()
+                .pv(pvUvUipByShortLink.getPv())
+                .uv(pvUvUipByShortLink.getUv())
+                .uip(pvUvUipByShortLink.getUip())
                 .daily(BeanUtil.copyToList(shortLinkStatsDOS,ShortLinkStatsAccessDailyRespDTO.class))
                 .localeCnStats(locateCNStats)
                 .hourStats(hourStats)
