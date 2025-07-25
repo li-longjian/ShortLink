@@ -74,6 +74,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkAccessLogsMapper linkAccessLogsMapper;
     private final LinkDeviceStatsMapper linkDeviceStatsMapper;
     private final LinkNetworkStatsMapper linkNetworkStatsMapper;
+    private final LinkTodayStatsMapper linkTodayStatsMapper;
     private  final String AMAP_KEY = "c1ce6eed90ea948651c4ad0ae6793cdc";
     /**
      * 短连接跳转源链接
@@ -336,7 +337,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     protected void shortLinkStats(String fullShortUrl, String gid, HttpServletRequest request, HttpServletResponse response){
         AtomicBoolean uvFirstFlag = new AtomicBoolean();
         Cookie[] cookies = request.getCookies();
-
+        Date currentTime = new Date();
 
         // 构建Redis键名（保留页面路径信息）
         String redisUvKey = REDIS_UV_KEY + fullShortUrl;
@@ -385,9 +386,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             /**
              * 获取时间日期等信息
              */
-            Date now = new Date();
-            int hour = DateUtil.hour(now,true);
-            Week week = DateUtil.dayOfWeekEnum(now);
+
+            int hour = DateUtil.hour(currentTime,true);
+            Week week = DateUtil.dayOfWeekEnum(currentTime);
             int weekValue = week.getIso8601Value();
             int uv_final = uvFirstFlag.get() ? 1 : 0;
             int uip_final = uipFirstFlag ? 1 : 0;
@@ -399,7 +400,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .uip(uip_final)
                     .hour(hour)
                     .weekday(weekValue)
-                    .date(now)
+                    .date(currentTime)
                     .build();
 
             //调用高德地图API获取定位信息
@@ -426,7 +427,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .adcode(adcode)
                     .province(province)
                     .city(city)
-                    .date(new Date())
+                    .date(currentTime)
                     .fullShortUrl(fullShortUrl)
                     .build();
             shortLinkStatsMapper.shortLinkStats(statsDO);//更新uv，PV，uip
@@ -439,7 +440,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .fullShortUrl(fullShortUrl)
                     .gid(gid)
                     .cnt(1)
-                    .date(new Date())
+                    .date(currentTime)
                     .os(os)
                     .build();
             linkOSStatsMapper.LinkOsStats(osStatsDO);
@@ -452,7 +453,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .fullShortUrl(fullShortUrl)
                     .gid(gid)
                     .cnt(1)
-                    .date(new Date())
+                    .date(currentTime)
                     .browser(browser)
                     .build();
             linkBrowserStatsMapper.LinkBrowserStats(browserStatsDO);
@@ -467,7 +468,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .cnt(1)
                     .gid(gid)
                     .fullShortUrl(fullShortUrl)
-                    .date(new Date())
+                    .date(currentTime)
                     .build();
             linkDeviceStatsMapper.LinkDeviceStats(linkDeviceStatsDO);
 
@@ -480,7 +481,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .cnt(1)
                     .gid(gid)
                     .fullShortUrl(fullShortUrl)
-                    .date(new Date())
+                    .date(currentTime)
                     .build();
             linkNetworkStatsMapper.LinkNetworkStats(linkNetworkStatsDO);
 
@@ -502,6 +503,16 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             linkAccessLogsMapper.LinkAccessLogs(accessLogDO);
             //更新total pv,uv,uip
             baseMapper.incrementStats(gid,fullShortUrl,1,uv_final,uip_final);
+            //更新today pv, uv,uip
+            LinkTodayStatsDO todayStatsDO = LinkTodayStatsDO.builder()
+                    .gid(gid)
+                    .fullShortUrl(fullShortUrl)
+                    .date(currentTime)
+                    .todayPv(1)
+                    .todayUv(uv_final)
+                    .todayUip(uip_final)
+                    .build();
+            linkTodayStatsMapper.linkTodayStats(todayStatsDO);
         } catch (Exception e){
            throw new RuntimeException(e);
         }
