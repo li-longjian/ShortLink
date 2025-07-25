@@ -7,5 +7,5 @@ import org.llj.shortlink.project.dao.entity.ShortLinkDO;
 @Data
 public class ShortLinkPageReqDTO extends Page<ShortLinkDO> {
     private String gid;
-    private String orderByTag;
+    private String orderTag;
 }

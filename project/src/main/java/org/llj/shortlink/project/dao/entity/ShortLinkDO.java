@@ -2,8 +2,10 @@ package org.llj.shortlink.project.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.llj.shortlink.project.common.dataBase.BaseDO;
 
 import java.time.LocalDateTime;
@@ -11,6 +13,8 @@ import java.time.LocalDateTime;
 @Data
 @TableName("t_link")
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class ShortLinkDO extends BaseDO {
     /**
      * id
@@ -81,5 +85,12 @@ public class ShortLinkDO extends BaseDO {
     private  Integer totalPv;
     private  Integer totalUv;
     private  Integer totalUip;
+
+    @TableField(exist = false)
+    private  Integer todayPv;
+    @TableField(exist = false)
+    private  Integer todayUv;
+    @TableField(exist = false)
+    private  Integer todayUip;
 
 }
