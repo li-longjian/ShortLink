@@ -412,6 +412,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 city = "未知地区";
                 adcode = "未知";
             }
+            if("[]".equals(province)) province = "未知";
+            if("[]".equals(city) ) city = "未知";
             LinkLocateStatsDO locateStatsDO = LinkLocateStatsDO.builder()
                     .cnt(1)
                     .country("中国")
@@ -450,6 +452,33 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .build();
             linkBrowserStatsMapper.LinkBrowserStats(browserStatsDO);
 
+
+            /**
+             * 设备
+             */
+            String device = LinkUtil.getDevice(request);
+            LinkDeviceStatsDO linkDeviceStatsDO = LinkDeviceStatsDO.builder()
+                    .device(device)
+                    .cnt(1)
+                    .gid(gid)
+                    .fullShortUrl(fullShortUrl)
+                    .date(new Date())
+                    .build();
+            linkDeviceStatsMapper.LinkDeviceStats(linkDeviceStatsDO);
+
+            /**
+             * 网络
+             */
+            String network = LinkUtil.getNetwork(request);
+            LinkNetworkStatsDO linkNetworkStatsDO = LinkNetworkStatsDO.builder()
+                    .network(network)
+                    .cnt(1)
+                    .gid(gid)
+                    .fullShortUrl(fullShortUrl)
+                    .date(new Date())
+                    .build();
+            linkNetworkStatsMapper.LinkNetworkStats(linkNetworkStatsDO);
+
             /**
              * 更新日志
              *
@@ -461,31 +490,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .os(os)
                     .browser(browser)
                     .user(uv.get())
+                    .device(device)
+                    .network(network)
+                    .locate(String.join("-","中国",province,city))
                     .build();
             linkAccessLogsMapper.LinkAccessLogs(accessLogDO);
-            /**
-             * 设备
-             */
-            LinkDeviceStatsDO linkDeviceStatsDO = LinkDeviceStatsDO.builder()
-                    .device(LinkUtil.getDevice((request)))
-                    .cnt(1)
-                    .gid(gid)
-                    .fullShortUrl(fullShortUrl)
-                    .date(new Date())
-                    .build();
-            linkDeviceStatsMapper.LinkDeviceStats(linkDeviceStatsDO);
-
-            /**
-             * 网络
-             */
-            LinkNetworkStatsDO linkNetworkStatsDO = LinkNetworkStatsDO.builder()
-                    .network(LinkUtil.getNetwork((request)))
-                    .cnt(1)
-                    .gid(gid)
-                    .fullShortUrl(fullShortUrl)
-                    .date(new Date())
-                    .build();
-            linkNetworkStatsMapper.LinkNetworkStats(linkNetworkStatsDO);
         } catch (Exception e){
            throw new RuntimeException(e);
         }

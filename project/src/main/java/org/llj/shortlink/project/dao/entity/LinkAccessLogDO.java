@@ -20,4 +20,7 @@ public class LinkAccessLogDO extends BaseDO {
     private String user;
     private String ip;
     private String os;
+    private String device;
+    private String locate;
+    private String network;
 }

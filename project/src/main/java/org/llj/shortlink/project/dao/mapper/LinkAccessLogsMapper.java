@@ -17,8 +17,8 @@ public interface LinkAccessLogsMapper extends BaseMapper<LinkAccessLogDO> {
      * 插入一条日志
      * @param linkAccessLogDO
      */
-    @Insert("INSERT INTO t_link_access_logs (full_short_url,gid,user,browser,os,ip, create_time,update_time,del_flag)\n " +
-            "VALUES(#{fullShortUrl},#{gid},#{user},#{browser},#{os},#{ip},NOW(), NOW(),0)")
+    @Insert("INSERT INTO t_link_access_logs (full_short_url,gid,user,browser,os,ip,device,network,locate, create_time,update_time,del_flag)\n " +
+            "VALUES(#{fullShortUrl},#{gid},#{user},#{browser},#{os},#{ip},#{device},#{network},#{locate},NOW(), NOW(),0)")
     void LinkAccessLogs(LinkAccessLogDO linkAccessLogDO);
 
 
