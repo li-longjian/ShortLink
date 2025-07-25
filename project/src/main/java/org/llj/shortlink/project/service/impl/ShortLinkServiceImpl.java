@@ -178,6 +178,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .validDate(linkCreateReqDTO.getValidDate())
                 .clickNum(0)
                 .favicon(getFavicon(linkCreateReqDTO.getOriginUrl()))
+                .totalPv(0)
+                .totalUv(0)
+                .totalUip(0)
                 .build();
         ShortLinkGotoDO gotoDO = ShortLinkGotoDO.builder()
                 .gid(linkCreateReqDTO.getGid())
@@ -386,12 +389,14 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             int hour = DateUtil.hour(now,true);
             Week week = DateUtil.dayOfWeekEnum(now);
             int weekValue = week.getIso8601Value();
+            int uv_final = uvFirstFlag.get() ? 1 : 0;
+            int uip_final = uipFirstFlag ? 1 : 0;
             ShortLinkStatsDO statsDO = ShortLinkStatsDO.builder()
                     .gid(gid)
                     .fullShortUrl(fullShortUrl)
                     .pv(1)
-                    .uv(uvFirstFlag.get() ? 1 : 0) //uvFlag true: 第一次访问+1， 否则为0
-                    .uip(uipFirstFlag ? 1 : 0)
+                    .uv(uv_final) //uvFlag true: 第一次访问+1， 否则为0
+                    .uip(uip_final)
                     .hour(hour)
                     .weekday(weekValue)
                     .date(now)
@@ -495,6 +500,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .locate(String.join("-","中国",province,city))
                     .build();
             linkAccessLogsMapper.LinkAccessLogs(accessLogDO);
+            //更新total pv,uv,uip
+            baseMapper.incrementStats(gid,fullShortUrl,1,uv_final,uip_final);
         } catch (Exception e){
            throw new RuntimeException(e);
         }
