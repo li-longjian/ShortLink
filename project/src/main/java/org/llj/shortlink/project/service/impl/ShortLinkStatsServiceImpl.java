@@ -2,16 +2,18 @@ package org.llj.shortlink.project.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
-import org.llj.shortlink.project.dao.entity.LinkDeviceStatsDO;
-import org.llj.shortlink.project.dao.entity.LinkLocateStatsDO;
-import org.llj.shortlink.project.dao.entity.LinkNetworkStatsDO;
-import org.llj.shortlink.project.dao.entity.ShortLinkStatsDO;
+import org.llj.shortlink.project.dao.entity.*;
 import org.llj.shortlink.project.dao.mapper.*;
+import org.llj.shortlink.project.dto.req.LinkAccessRecodeReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkStatsReqDTO;
 import org.llj.shortlink.project.dto.resp.*;
 import org.llj.shortlink.project.service.ShortLinkStatsService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -196,5 +198,47 @@ public class ShortLinkStatsServiceImpl  implements ShortLinkStatsService {
                 .deviceStats(deviceStats)
                 .networkStats(networkStats)
                 .build();
+    }
+
+    /**
+     * 访问记录分页查询
+     * @param requestParam
+     * @return
+     */
+    @Override
+    @Transactional
+    public IPage<LinkAccessRecodeRespDTO> linkAccessStatsPage(LinkAccessRecodeReqDTO requestParam) {
+        LambdaQueryWrapper<LinkAccessLogDO> queryWrapper = Wrappers.lambdaQuery(LinkAccessLogDO.class)
+                .eq(LinkAccessLogDO::getGid, requestParam.getGid())
+                .eq(LinkAccessLogDO::getFullShortUrl, requestParam.getFullShortUrl())
+                .eq(LinkAccessLogDO::getDelFlag, 0)
+                .between(LinkAccessLogDO::getCreateTime,requestParam.getStartDate(),requestParam.getEndDate())
+                .orderByDesc(LinkAccessLogDO::getCreateTime);
+
+        IPage<LinkAccessLogDO> linkAccessLogPage = linkAccessLogsMapper.selectPage(requestParam, queryWrapper);
+        IPage<LinkAccessRecodeRespDTO> resultPage = linkAccessLogPage.convert(each -> BeanUtil.toBean(each, LinkAccessRecodeRespDTO.class));
+        List<String> uvList = resultPage.getRecords().stream()
+                .map(LinkAccessRecodeRespDTO::getUser)
+                .toList();//得到了结果集中用户列表, 为了下一步判断此用户是新用户或者老用户
+
+        /**
+         * 得到用户类型：新访客，旧访客
+         */
+        List<HashMap<String, Object>> uvTypeInfo = linkAccessLogsMapper.findUvTypeByUser(
+                requestParam.getGid(),
+                requestParam.getFullShortUrl(),
+                requestParam.getStartDate(),
+                requestParam.getEndDate(),
+                uvList
+        );
+        resultPage.getRecords().forEach(each -> {
+            String uvType = uvTypeInfo.stream()
+                    .filter(item -> ObjectUtil.equal(each.getUser(), item.get("user")))
+                    .findFirst()
+                    .map(item -> item.get("uvType").toString())
+                    .orElse("旧访客");
+            each.setUvType(uvType);
+        });
+        return resultPage;
     }
 }
