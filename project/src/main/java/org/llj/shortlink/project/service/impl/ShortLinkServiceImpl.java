@@ -76,6 +76,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkNetworkStatsMapper linkNetworkStatsMapper;
     private final LinkTodayStatsMapper linkTodayStatsMapper;
     private  final String AMAP_KEY = "c1ce6eed90ea948651c4ad0ae6793cdc";
+    private final String defaultDomain= "nurl.link:8001";
     /**
      * 短连接跳转源链接
      * @param shortUri
@@ -88,7 +89,13 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     public void reStoreUrl(String shortUri, HttpServletRequest request, HttpServletResponse response) {
         String serverName = request.getServerName();
         String scheme = request.getScheme();
-        String fullShortUrl = serverName + "/"  + shortUri;
+        String serverPort = Optional.of(request.getServerPort())
+                .filter(each -> each != 80)
+                .map(String::valueOf)
+                .map(each -> ":"+each)
+                .orElse("");
+
+        String fullShortUrl = serverName + serverPort + "/"  + shortUri;
         String originalLink = stringRedisTemplate.opsForValue().get(String.format(FULL_SHORT_URL_KEY, fullShortUrl));
         if(StringUtil.isNotBlank(originalLink)) {
             shortLinkStats(fullShortUrl,null,request,response);
@@ -161,14 +168,14 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     @Transactional(propagation = Propagation.REQUIRED)
     public LinkCreateRespDTO createShortLink(LinkCreateReqDTO linkCreateReqDTO) {
         String shortLinkSuffix = generateLinkSuffix(linkCreateReqDTO);
-        String fullShortLinkUrl = linkCreateReqDTO.getDomain() + '/' + shortLinkSuffix;
+        String fullShortLinkUrl = defaultDomain + '/' + shortLinkSuffix;
         LambdaQueryWrapper<ShortLinkDO> QueryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                 .eq(ShortLinkDO::getFullShortUrl, fullShortLinkUrl);
         ShortLinkDO linkDO = baseMapper.selectOne(QueryWrapper);
         if(linkDO != null) throw new ServiceException("当前短连接已存在");
         rBloomFilter.add(fullShortLinkUrl);
         ShortLinkDO shortLinkDO =  ShortLinkDO.builder()
-                .domain(linkCreateReqDTO.getDomain())
+                .domain(defaultDomain)
                 .shortUri(shortLinkSuffix)
                 .originUrl(linkCreateReqDTO.getOriginUrl())
                 .fullShortUrl(fullShortLinkUrl)
