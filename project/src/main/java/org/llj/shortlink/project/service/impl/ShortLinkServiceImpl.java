@@ -305,7 +305,20 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             baseMapper.delete(updateWrapper);
             newLink.setGid(linkUpdateReqDTO.getNewGid());
             baseMapper.update(newLink,updateWrapper);
+
+
         }
+        //检查短连接的更新前后有效期是否变化
+        if(!Objects.equals(linkDO.getValidDateType(),linkUpdateReqDTO.getValidDateType()) ||
+                !Objects.equals(linkDO.getValidDate(),linkUpdateReqDTO.getValidDate())){
+            stringRedisTemplate.delete(String.format(FULL_SHORT_URL_KEY, linkDO.getFullShortUrl()));//发生变化，则需要删除缓存中数据
+            if(Objects.equals(linkUpdateReqDTO.getValidDateType(),0) ||
+                   linkUpdateReqDTO.getValidDate().isAfter(LocalDateTime.now())){
+                //删除404缓存
+                stringRedisTemplate.delete(String.format(IS_NULL_FULL_SHORT_URL_KEY, linkDO.getFullShortUrl()));
+            }
+        }
+
 
     }
 
