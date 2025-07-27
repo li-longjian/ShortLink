@@ -1,10 +1,16 @@
 package org.llj.shortlink.project.dto.req;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class LinkCreateReqDTO {
     /**
      * 域名

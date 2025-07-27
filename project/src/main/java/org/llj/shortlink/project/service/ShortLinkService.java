@@ -8,9 +8,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.llj.shortlink.project.dao.entity.ShortLinkDO;
 import org.llj.shortlink.project.dto.req.LinkCreateReqDTO;
 import org.llj.shortlink.project.dto.req.LinkUpdateReqDTO;
+import org.llj.shortlink.project.dto.req.ShortLinkBatchCreateReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import org.llj.shortlink.project.dto.resp.GroupLinkCountRespDTO;
 import org.llj.shortlink.project.dto.resp.LinkCreateRespDTO;
+import org.llj.shortlink.project.dto.resp.ShortLinkBatchCreateRespDTO;
 import org.llj.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 
 import java.util.List;
@@ -25,5 +27,11 @@ public interface ShortLinkService extends IService<ShortLinkDO> {
     void updateLink(LinkUpdateReqDTO linkUpdateReqDTO);
 
     void reStoreUrl(String shortUri, HttpServletRequest request, HttpServletResponse response);
-
+    /**
+     * 批量创建短链接
+     *
+     * @param requestParam 批量创建短链接请求参数
+     * @return 批量创建短链接返回参数
+     */
+    ShortLinkBatchCreateRespDTO batchCreateShortLink(ShortLinkBatchCreateReqDTO requestParam);
 }
