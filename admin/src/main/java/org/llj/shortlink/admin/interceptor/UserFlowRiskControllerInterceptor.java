@@ -39,7 +39,7 @@ public class UserFlowRiskControllerInterceptor implements HandlerInterceptor {
         String username = Optional.ofNullable(BaseContext.getUserName()).orElse("other");
         ArrayList<String> strings = new ArrayList<>();
         strings.add(username);
-        Long result = null;
+        Long result ;
         try{
             result = stringRedisTemplate.execute(redisScript, strings ,userFlowRiskControllerConfiguration.getTimeWindow());
         }catch (Exception e){
@@ -49,6 +49,7 @@ public class UserFlowRiskControllerInterceptor implements HandlerInterceptor {
         }
         if (result == null || result > userFlowRiskControllerConfiguration.getMaxAccessCount()) {
             returnJson(response, JSON.toJSONString(Results.failure(new ClientException("当前系统繁忙，请稍后再试"))));
+            return false;
         }
         return true;
     }
