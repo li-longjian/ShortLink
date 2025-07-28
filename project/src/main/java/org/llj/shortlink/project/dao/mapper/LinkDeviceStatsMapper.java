@@ -5,7 +5,6 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
-import org.llj.shortlink.project.dao.entity.LinkAccessLogDO;
 import org.llj.shortlink.project.dao.entity.LinkDeviceStatsDO;
 import org.llj.shortlink.project.dto.req.LinkStatsGroupReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkStatsReqDTO;
@@ -13,7 +12,7 @@ import org.llj.shortlink.project.dto.req.ShortLinkStatsReqDTO;
 import java.util.List;
 
 @Mapper
-public interface LinkDeviceStatsMapper extends BaseMapper<LinkAccessLogDO> {
+public interface LinkDeviceStatsMapper extends BaseMapper<LinkDeviceStatsDO> {
     @Insert("INSERT INTO t_link_device_stats (full_short_url,gid,date,cnt,device, create_time,update_time,del_flag)\n " +
             "VALUES(#{fullShortUrl},#{gid},#{date},#{cnt},#{device},NOW(), NOW(),0) ON DUPLICATE KEY\n " +
             "UPDATE cnt = cnt + #{cnt}")

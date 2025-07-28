@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.llj.shortlink.project.common.dataBase.BaseDO;
 
 import java.util.Date;
 
@@ -13,7 +14,7 @@ import java.util.Date;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ShortLinkStatsDO {
+public class ShortLinkStatsDO extends BaseDO {
     private Long id;
     private String gid;
     private String fullShortUrl;

@@ -96,7 +96,13 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, ShortLi
                 .eq(ShortLinkDO::getGid, recycleBinDeleteReqDTO.getGid())
                 .eq(ShortLinkDO::getDelFlag, 0)
                 .eq(ShortLinkDO::getFullShortUrl, recycleBinDeleteReqDTO.getFullShortUrl())
+                .eq(ShortLinkDO::getDelTime,0L) //删除时间时间戳，0代表没有被删除
                 .eq(ShortLinkDO::getEnableStatus, 1);
-        baseMapper.delete(updateWrapper);//配置了mp 的逻辑删除功能，并不是物理删除
+        ShortLinkDO linkDO = ShortLinkDO.builder()
+                .delTime(System.currentTimeMillis())
+                .build();
+        linkDO.setDelFlag(1);
+        baseMapper.update(linkDO,updateWrapper);
+        // baseMapper.delete(updateWrapper);//配置了mp 的逻辑删除功能，并不是物理删除
     }
 }

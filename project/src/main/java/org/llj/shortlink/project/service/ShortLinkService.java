@@ -6,10 +6,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.llj.shortlink.project.dao.entity.ShortLinkDO;
-import org.llj.shortlink.project.dto.req.LinkCreateReqDTO;
-import org.llj.shortlink.project.dto.req.LinkUpdateReqDTO;
-import org.llj.shortlink.project.dto.req.ShortLinkBatchCreateReqDTO;
-import org.llj.shortlink.project.dto.req.ShortLinkPageReqDTO;
+import org.llj.shortlink.project.dto.biz.ShortLinkStatsRecordDTO;
+import org.llj.shortlink.project.dto.req.*;
 import org.llj.shortlink.project.dto.resp.GroupLinkCountRespDTO;
 import org.llj.shortlink.project.dto.resp.LinkCreateRespDTO;
 import org.llj.shortlink.project.dto.resp.ShortLinkBatchCreateRespDTO;
@@ -34,4 +32,6 @@ public interface ShortLinkService extends IService<ShortLinkDO> {
      * @return 批量创建短链接返回参数
      */
     ShortLinkBatchCreateRespDTO batchCreateShortLink(ShortLinkBatchCreateReqDTO requestParam);
+
+    void shortLinkStats(String fullShortUrl, String gid, ShortLinkStatsRecordDTO shortLinkStatsRecordDTO);
 }

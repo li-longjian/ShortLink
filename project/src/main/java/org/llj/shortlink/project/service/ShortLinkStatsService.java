@@ -2,6 +2,8 @@ package org.llj.shortlink.project.service;
 
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.service.IService;
+import org.llj.shortlink.project.dao.entity.ShortLinkStatsDO;
 import org.llj.shortlink.project.dto.req.LinkAccessGroupRecodeReqDTO;
 import org.llj.shortlink.project.dto.req.LinkAccessRecodeReqDTO;
 import org.llj.shortlink.project.dto.req.LinkStatsGroupReqDTO;
@@ -9,7 +11,7 @@ import org.llj.shortlink.project.dto.req.ShortLinkStatsReqDTO;
 import org.llj.shortlink.project.dto.resp.LinkAccessRecodeRespDTO;
 import org.llj.shortlink.project.dto.resp.ShortLinkStatsRespDTO;
 
-public interface ShortLinkStatsService {
+public interface ShortLinkStatsService extends IService<ShortLinkStatsDO> {
     /**
      * 获取单个短链接监控数据
      *

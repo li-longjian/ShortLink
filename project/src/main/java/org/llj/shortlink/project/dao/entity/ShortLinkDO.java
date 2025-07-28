@@ -92,5 +92,8 @@ public class ShortLinkDO extends BaseDO {
     private  Integer todayUv;
     @TableField(exist = false)
     private  Integer todayUip;
-
+    /**
+     * 删除时间戳
+     */
+    private Long delTime;
 }

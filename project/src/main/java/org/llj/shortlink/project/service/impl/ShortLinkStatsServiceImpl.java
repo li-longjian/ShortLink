@@ -9,6 +9,7 @@ import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.llj.shortlink.project.dao.entity.*;
 import org.llj.shortlink.project.dao.mapper.*;
@@ -26,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
-public class ShortLinkStatsServiceImpl  implements ShortLinkStatsService {
+public class ShortLinkStatsServiceImpl extends ServiceImpl<ShortLinkStatsMapper,ShortLinkStatsDO> implements ShortLinkStatsService {
     private final ShortLinkStatsMapper shortLinkStatsMapper;
     private final LinkAccessLogsMapper linkAccessLogsMapper;
     private final LinkBrowserStatsMapper linkBrowserStatsMapper;
