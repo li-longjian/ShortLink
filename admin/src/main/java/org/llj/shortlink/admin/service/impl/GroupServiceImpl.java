@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
 import lombok.val;
 import org.llj.shortlink.admin.common.Exception.ClientException;
 import org.llj.shortlink.admin.common.context.BaseContext;
@@ -14,38 +15,55 @@ import org.llj.shortlink.admin.dto.req.GroupOrderReqDTO;
 import org.llj.shortlink.admin.dto.req.GroupUpdateReqDTO;
 import org.llj.shortlink.admin.dto.resp.GroupGetRespDTO;
 import org.llj.shortlink.admin.service.GroupService;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static org.llj.shortlink.admin.common.constant.RedissionCacheConstant.LOCK_GROUP_ADD_KEY;
 import static org.llj.shortlink.admin.utils.RandomStringGenerator.generateSixDigits;
 
 @Service
+@RequiredArgsConstructor
 public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implements GroupService {
 
-
+    @Value("${shortlink.group.maxSize}")
+    private Long GROUP_MAX_SIZE;
+    private final RedissonClient redisson;
     @Override
     @Transactional(propagation = Propagation.REQUIRED)
     public void addGroup(String name) {
+        String username = BaseContext.getUserName();
+        RLock lock = redisson.getLock(String.format(LOCK_GROUP_ADD_KEY, username));
+        lock.lock();
+        try{
+            LambdaQueryWrapper<GroupDO> wrapper = Wrappers.lambdaQuery(GroupDO.class).eq(GroupDO::getUsername, username);
+            Long count = baseMapper.selectCount(wrapper);
+            if(count.equals(GROUP_MAX_SIZE))  throw  new ClientException(String.format("分组数已超过最大数量:%d",GROUP_MAX_SIZE));
+            val queryWrapper = Wrappers.lambdaQuery(GroupDO.class)
+                    .eq(GroupDO::getName, name)
+                    .eq(GroupDO::getUsername, BaseContext.getUserName())
+                    .eq(GroupDO::getDelFlag, 0);
+            GroupDO groupDO = baseMapper.selectOne(queryWrapper);
+            if(groupDO != null) throw  new ClientException("当前组名已经存在");
+            String gid = "";
+            do{
+                gid = generateSixDigits();
+            }while(checkGIDisExist(gid));
+            GroupDO build = GroupDO.builder()
+                    .name(name)
+                    .username(BaseContext.getUserName())
+                    .gid(gid)
+                    .build();
+            baseMapper.insert(build);
+        }finally {
+            lock.unlock();
+        }
 
-        val queryWrapper = Wrappers.lambdaQuery(GroupDO.class)
-                .eq(GroupDO::getName, name)
-                .eq(GroupDO::getUsername, BaseContext.getUserName())
-                .eq(GroupDO::getDelFlag, 0);
-        GroupDO groupDO = baseMapper.selectOne(queryWrapper);
-        if(groupDO != null) throw  new ClientException("当前组名已经存在");
-        String gid = "";
-        do{
-             gid = generateSixDigits();
-        }while(checkGIDisExist(gid));
-        GroupDO build = GroupDO.builder()
-                .name(name)
-                .username(BaseContext.getUserName())
-                .gid(gid)
-                .build();
-        baseMapper.insert(build);
     }
 
     /**
