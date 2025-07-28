@@ -2,7 +2,9 @@ package org.llj.shortlink.admin.config;
 
 import groovy.util.logging.Slf4j;
 import lombok.RequiredArgsConstructor;
+import org.llj.shortlink.admin.interceptor.UserFlowRiskControllerInterceptor;
 import org.llj.shortlink.admin.interceptor.UserInterceptor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -13,7 +15,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupp
 @RequiredArgsConstructor
 public class WebMvcConfiguration extends WebMvcConfigurationSupport {
     private final UserInterceptor userInterceptor;
-
+    private final UserFlowRiskControllerInterceptor userFlowRiskControllerInterceptor;
+    @Value("${shortlink.flow-limit.enable}")
+    private boolean UserFlowControllerEnable;
     /**
      * 注册自定义拦截器
      *
@@ -24,9 +28,18 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
         //注册管理端登录拦截器
         registry.addInterceptor(userInterceptor)
                 .addPathPatterns("/api/shortlink/**")
+                .order(1)
                 .excludePathPatterns("/api/shortlink/admin/v1/user/login")
                 .excludePathPatterns("/api/shortlink/admin/v1/user/register");
+
+        if(UserFlowControllerEnable){
+            registry.addInterceptor(userFlowRiskControllerInterceptor)
+                    .order(10)
+                    .addPathPatterns("/api/shortlink/**");
+        }
+
     }
+
 
     /**
      * 设置静态资源映射

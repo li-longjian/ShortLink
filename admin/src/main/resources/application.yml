@@ -12,11 +12,15 @@ spring:
 
 server:
   port: 8002
-shortlink:
-  group:
-    maxSize: 20
 
 logging:
     level:
         org.springframework.ai: debug
         com.llj.ai: debug
+shortlink:
+  group:
+    maxSize: 20
+  flow-limit:
+    enable: false
+    time-window: 1
+    max-access-count: 20
