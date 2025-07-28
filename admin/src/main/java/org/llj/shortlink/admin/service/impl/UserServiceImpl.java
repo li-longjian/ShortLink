@@ -121,7 +121,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDo> implements 
         if(userDo == null) throw new ClientException("用户名或密码错误");
 
         String pre_token  = BaseContext.getUserName();
-        if( pre_token != null && !pre_token.isEmpty()) throw  new ClientException("已登录");
+        if( pre_token != null && !pre_token.isEmpty()) return new UserLoginRespDTO(pre_token); //保证多端登录
         //用户名密码正确，生成token
         Map<String,Object> claims = new HashMap<>();
         claims.put("username",userDo.getUsername());
