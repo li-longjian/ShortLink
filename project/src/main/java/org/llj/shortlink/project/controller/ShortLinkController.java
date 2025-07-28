@@ -1,11 +1,13 @@
 package org.llj.shortlink.project.controller;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.llj.shortlink.project.common.convention.result.Result;
 import org.llj.shortlink.project.common.convention.result.Results;
+import org.llj.shortlink.project.common.handler.CustomBlockHandler;
 import org.llj.shortlink.project.dto.req.LinkCreateReqDTO;
 import org.llj.shortlink.project.dto.req.LinkUpdateReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkBatchCreateReqDTO;
@@ -32,6 +34,11 @@ public class ShortLinkController {
      * @return
      */
     @PostMapping("/api/shortlink/v1/link/create")
+    @SentinelResource(
+            value = "create_short-link",
+            blockHandler = "createShortLinkBlockHandlerMethod",
+            blockHandlerClass = CustomBlockHandler.class
+    )
     public Result<LinkCreateRespDTO> createShortLink(@RequestBody LinkCreateReqDTO linkCreateReqDTO) {
         return Results.success(shortLinkService.createShortLink(linkCreateReqDTO));
     }

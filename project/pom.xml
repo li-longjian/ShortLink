@@ -93,6 +93,15 @@
             <artifactId>easyexcel</artifactId>
             <version>3.3.4</version>
         </dependency>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+        </dependency>
+<!--        如果使用单机版本必须使用下面这个依赖-->
+        <dependency>
+            <groupId>com.alibaba.csp</groupId>
+            <artifactId>sentinel-annotation-aspectj</artifactId>
+        </dependency>
     </dependencies>
 
 </project>
