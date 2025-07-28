@@ -15,7 +15,7 @@ public class LinkCreateReqDTO {
     /**
      * 域名
      */
-    private String domain;
+    //private String domain;
 
 
 

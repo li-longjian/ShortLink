@@ -27,6 +27,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.llj.shortlink.project.common.Exception.ClientException;
 import org.llj.shortlink.project.common.Exception.ServiceException;
+import org.llj.shortlink.project.common.config.GoToDomainWhiteListConfiguration;
 import org.llj.shortlink.project.dao.entity.*;
 import org.llj.shortlink.project.dao.mapper.*;
 import org.llj.shortlink.project.dto.biz.ShortLinkStatsRecordDTO;
@@ -82,7 +83,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final ShortLinkGotoMapper shortLinkGotoMapper;
     private final LinkStatsTodayService linkStatsTodayService;
     private final DelayShortLinkStatsProducer delayShortLinkStatsProducer;
-
+    private final GoToDomainWhiteListConfiguration goToDomainWhiteListConfiguration;
     private final String AMAP_KEY = "c1ce6eed90ea948651c4ad0ae6793cdc";
     private final String defaultDomain = "nurl.link:8001";
 
@@ -205,7 +206,16 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .build();
     }
 
-
+    private void verificationWhitelist(String originUrl) {
+        Boolean enable = goToDomainWhiteListConfiguration.getEnable();
+        if(enable == null || !enable) return;
+        String domain = LinkUtil.extractDomain(originUrl);
+        if(StrUtil.isBlank(domain)) throw  new ClientException("跳转链接填写错误");
+        List<String> details = goToDomainWhiteListConfiguration.getDetails();
+        if(!details.contains(domain)){
+            throw new ClientException("演示环境为避免恶意攻击，请生成以下网站跳转链接：" + goToDomainWhiteListConfiguration.getNames());
+        }
+    }
 
     /**
      * 创建短连接
@@ -216,6 +226,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     @Override
     @Transactional(propagation = Propagation.REQUIRED)
     public LinkCreateRespDTO createShortLink(LinkCreateReqDTO linkCreateReqDTO) {
+        verificationWhitelist(linkCreateReqDTO.getOriginUrl());
         String shortLinkSuffix = generateLinkSuffix(linkCreateReqDTO);
         String fullShortLinkUrl = defaultDomain + '/' + shortLinkSuffix;
         LambdaQueryWrapper<ShortLinkDO> QueryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
@@ -289,6 +300,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     @Override
     @Transactional(propagation = Propagation.REQUIRED)
     public void updateLink(LinkUpdateReqDTO linkUpdateReqDTO) {
+        verificationWhitelist(linkUpdateReqDTO.getOriginUrl());
         LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                 .eq(ShortLinkDO::getGid, linkUpdateReqDTO.getGid())
                 .eq(ShortLinkDO::getDelFlag, 0)
@@ -481,7 +493,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             }
             originUrl += System.currentTimeMillis();
             shortLinkSuffix = HashUtil.hashToBase62(originUrl);
-            String fullShortLinkUrl = linkCreateReqDTO.getDomain() + '/' + shortLinkSuffix;
+            String fullShortLinkUrl = defaultDomain + '/' + shortLinkSuffix;
             if (!rBloomFilter.contains(fullShortLinkUrl)) {
                 break;
             }

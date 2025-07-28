@@ -29,6 +29,15 @@ mybatis-plus:
 shortlink:
   api:
     amap-key: c1ce6eed90ea948651c4ad0ae6793cdc
+  goto-domain: ## 短连接创建更新时跳转白名单
+    white-list:
+      enable: true
+      names: '拿个offer,知乎,掘金,博客园'
+      details:
+        - nageoffer.com
+        - zhihu.com
+        - juejin.cn
+        - cnblogs.com
 logging:
     level:
         org.springframework.ai: debug
