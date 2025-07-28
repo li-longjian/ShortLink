@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.llj.shortlink.project.common.Exception.ClientException;
 import org.llj.shortlink.project.common.context.BaseContext;
 import org.llj.shortlink.project.utils.JwtUtil;
 import org.springframework.stereotype.Component;
@@ -30,6 +31,7 @@ public class UserInterceptor implements HandlerInterceptor {
         try {
             log.info("jwt校验:{}", token);
             Claims claims = JwtUtil.parseJWT(SECRET_KEY, token);
+            if(claims == null || claims.isEmpty()) throw new ClientException("请重新登录");
             String userName = claims.get("username", String.class);
 
             //将当前用户id放入ThreadLocal中

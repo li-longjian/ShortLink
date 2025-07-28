@@ -40,6 +40,7 @@ import org.llj.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import org.llj.shortlink.project.dto.resp.*;
 import org.llj.shortlink.project.mq.producer.DelayShortLinkStatsMQProducer;
 import org.llj.shortlink.project.mq.producer.DelayShortLinkStatsProducer;
+import org.llj.shortlink.project.mq.producer.ShortLinkStatsMQProducer;
 import org.llj.shortlink.project.service.LinkStatsTodayService;
 import org.llj.shortlink.project.service.ShortLinkService;
 import org.llj.shortlink.project.utils.HashUtil;
@@ -85,8 +86,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkTodayStatsMapper linkTodayStatsMapper;
     private final ShortLinkGotoMapper shortLinkGotoMapper;
     private final LinkStatsTodayService linkStatsTodayService;
-    private final DelayShortLinkStatsProducer delayShortLinkStatsProducer;
+    private final DelayShortLinkStatsProducer delayShortLinkStatsProducer; //redisson 实现的延时队列
     private final DelayShortLinkStatsMQProducer delayShortLinkStatsMQProducer; // Rocket Mq 实现的延时队列
+    private final ShortLinkStatsMQProducer shortLinkStatsMQProducer; //消息队列 生产者
     private final GoToDomainWhiteListConfiguration goToDomainWhiteListConfiguration;
     private final String AMAP_KEY = "c1ce6eed90ea948651c4ad0ae6793cdc";
     private final String defaultDomain = "nurl.link:8001";
@@ -114,9 +116,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         String originalLink = stringRedisTemplate.opsForValue().get(String.format(FULL_SHORT_URL_KEY, fullShortUrl));
         if (StringUtil.isNotBlank(originalLink)) {
             //shortLinkStats(fullShortUrl, null, request, response);
+
+            response.sendRedirect(originalLink);//先给用户返回跳转
+            //在消息队列 进行数据统计
             ShortLinkStatsRecordDTO statsRecordDTO = builderLinkStatsRecordAndSetUser(fullShortUrl, request, response);
-            shortLinkStats(fullShortUrl,null,statsRecordDTO);
-            response.sendRedirect(originalLink);
+            shortLinkStatsMQProducer.sendMessage(statsRecordDTO);
             return;
 
         }
@@ -136,9 +140,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         try {
             originalLink = stringRedisTemplate.opsForValue().get(String.format(FULL_SHORT_URL_KEY, fullShortUrl));
             if (StringUtil.isNotBlank(originalLink)) {
-                ShortLinkStatsRecordDTO statsRecordDTO = builderLinkStatsRecordAndSetUser(fullShortUrl, request, response);
-                shortLinkStats(fullShortUrl,null,statsRecordDTO);
+
                 response.sendRedirect(originalLink);
+                ShortLinkStatsRecordDTO statsRecordDTO = builderLinkStatsRecordAndSetUser(fullShortUrl, request, response);
+                shortLinkStatsMQProducer.sendMessage(statsRecordDTO);
                 return;
             }
             LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
@@ -168,9 +173,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     validTime,
                     TimeUnit.SECONDS
             );
-            ShortLinkStatsRecordDTO statsRecordDTO = builderLinkStatsRecordAndSetUser(fullShortUrl, request, response);
-            shortLinkStats(fullShortUrl,linkDO.getGid(),statsRecordDTO);
+
             response.sendRedirect(linkDO.getOriginUrl());
+            ShortLinkStatsRecordDTO statsRecordDTO = builderLinkStatsRecordAndSetUser(fullShortUrl, request, response);
+            shortLinkStatsMQProducer.sendMessage(statsRecordDTO);
         } finally {
             lock.unlock();
         }
