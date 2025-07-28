@@ -22,6 +22,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jodd.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.client.producer.SendStatus;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -36,6 +38,7 @@ import org.llj.shortlink.project.dto.req.LinkUpdateReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkBatchCreateReqDTO;
 import org.llj.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import org.llj.shortlink.project.dto.resp.*;
+import org.llj.shortlink.project.mq.producer.DelayShortLinkStatsMQProducer;
 import org.llj.shortlink.project.mq.producer.DelayShortLinkStatsProducer;
 import org.llj.shortlink.project.service.LinkStatsTodayService;
 import org.llj.shortlink.project.service.ShortLinkService;
@@ -83,6 +86,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final ShortLinkGotoMapper shortLinkGotoMapper;
     private final LinkStatsTodayService linkStatsTodayService;
     private final DelayShortLinkStatsProducer delayShortLinkStatsProducer;
+    private final DelayShortLinkStatsMQProducer delayShortLinkStatsMQProducer; // Rocket Mq 实现的延时队列
     private final GoToDomainWhiteListConfiguration goToDomainWhiteListConfiguration;
     private final String AMAP_KEY = "c1ce6eed90ea948651c4ad0ae6793cdc";
     private final String defaultDomain = "nurl.link:8001";
@@ -601,7 +605,12 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
        //获取统计数据之前先获取读锁
         RLock rLock = rReadWriteLock.readLock();
         if(!rLock.tryLock()) {
-            delayShortLinkStatsProducer.send(statsRecord);
+            //生产者发送消息
+            SendResult sendResult = delayShortLinkStatsMQProducer.sendMessage(statsRecord);
+            if(!Objects.equals(sendResult.getSendStatus(), SendStatus.SEND_OK)){
+                throw new ServiceException("延迟队列投递消息失败");
+            }
+            // delayShortLinkStatsProducer.send(statsRecord);
             return;
         }
         //已经获取到了读锁, 执行统计任务

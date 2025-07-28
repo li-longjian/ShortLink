@@ -26,6 +26,14 @@ mybatis-plus:
       id-type: auto
   mapper-locations: classpath:mapper/*.xml
 
+rocketmq:
+  name-server: 127.0.0.1:9876
+  producer:
+    group: kiki
+    send-message-timeout: 2000
+    retry-times-when-send-failed: 1
+    retry-times-when-send-async-failed: 1
+
 shortlink:
   api:
     amap-key: c1ce6eed90ea948651c4ad0ae6793cdc
