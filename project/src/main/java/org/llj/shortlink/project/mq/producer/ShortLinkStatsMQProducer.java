@@ -23,14 +23,18 @@ import java.util.UUID;
 @Component
 public class ShortLinkStatsMQProducer extends AbstractCommonSendProduceTemplate<ShortLinkStatsRecordDTO>{
 
+
     private final ConfigurableEnvironment environment;
 
-    //构造注入
     public ShortLinkStatsMQProducer(@Autowired RocketMQTemplate rocketMQTemplate, @Autowired ConfigurableEnvironment environment) {
         super(rocketMQTemplate);
         this.environment = environment;
     }
-   //设置消息的基本参数，包括事件名称、键（使用完整短链接）、主题和标签
+
+
+
+
+    //设置消息的基本参数，包括事件名称、键（使用完整短链接）、主题和标签
     @Override
     protected BaseSendExtendDTO buildBaseSendExtendParam(ShortLinkStatsRecordDTO messageSendEvent) {
         return BaseSendExtendDTO.builder()

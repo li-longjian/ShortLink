@@ -610,6 +610,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
        RReadWriteLock rReadWriteLock =  redissonClient.getReadWriteLock(String.format(LOCK_GID_UPDATE_KEY,statsRecord.getFullShortUrl()));
        //获取统计数据之前先获取读锁
         RLock rLock = rReadWriteLock.readLock();
+        fullShortUrl = statsRecord.getFullShortUrl();
         if(!rLock.tryLock()) {
             //生产者发送消息
             SendResult sendResult = delayShortLinkStatsMQProducer.sendMessage(statsRecord);
@@ -622,6 +623,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         //已经获取到了读锁, 执行统计任务
         try {
             if(StrUtil.isBlank(gid)){
+
                 LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
                         .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
                 ShortLinkGotoDO gotoDO = gotoMapper.selectOne(queryWrapper);

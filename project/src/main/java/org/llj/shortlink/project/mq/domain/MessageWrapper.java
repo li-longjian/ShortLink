@@ -31,7 +31,7 @@ public final class MessageWrapper<T> implements Serializable {
     private T message;
 
     /**
-     * 唯一标识，用于客户端幂等验证
+     * 唯一标识，用于客户端幂等验证， 作为当前消息的ID
      */
     private String uuid = UUID.randomUUID().toString();
 
