@@ -4,20 +4,18 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.util.Date;
-import java.util.List;
 
 @Data
-public class LinkBatchCreateReqDTO {
+public class ShortLinkCreateReqDTO {
+    /**
+     * 域名
+     */
+    private String domain;
 
     /**
-     * 原始链接集合
+     * 原始链接
      */
-    private List<String> originUrls;
-
-    /**
-     * 描述集合
-     */
-    private List<String> describes;
+    private String originUrl;
 
     /**
      * 分组标识
@@ -39,4 +37,9 @@ public class LinkBatchCreateReqDTO {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date validDate;
+
+    /**
+     * 描述
+     */
+    private String describe;
 }

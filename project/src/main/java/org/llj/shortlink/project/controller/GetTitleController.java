@@ -20,7 +20,7 @@ public class GetTitleController {
      * @param url
      * @return
      */
-    @GetMapping("/api/shortlink/title")
+    @GetMapping("/api/shortlink/v1/title")
     public Result<String> getTitle(@RequestParam("url") String url) {
         return Results.success(getTitleByUrlService.getTitle(url));
     }

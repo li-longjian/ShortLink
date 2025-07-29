@@ -14,6 +14,7 @@ import org.llj.shortlink.admin.dao.mapper.GroupMapper;
 import org.llj.shortlink.admin.dto.req.GroupOrderReqDTO;
 import org.llj.shortlink.admin.dto.req.GroupUpdateReqDTO;
 import org.llj.shortlink.admin.dto.resp.GroupGetRespDTO;
+import org.llj.shortlink.admin.remote.ShortLinkActualRemoteService;
 import org.llj.shortlink.admin.service.GroupService;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -30,10 +31,13 @@ import static org.llj.shortlink.admin.utils.RandomStringGenerator.generateSixDig
 @Service
 @RequiredArgsConstructor
 public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implements GroupService {
+    private final ShortLinkActualRemoteService shortLinkActualRemoteService;
 
     @Value("${shortlink.group.maxSize}")
     private Long GROUP_MAX_SIZE;
     private final RedissonClient redisson;
+
+
     @Override
     @Transactional(propagation = Propagation.REQUIRED)
     public void addGroup(String name) {
