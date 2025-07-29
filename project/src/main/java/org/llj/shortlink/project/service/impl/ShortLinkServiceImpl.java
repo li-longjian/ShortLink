@@ -501,7 +501,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             } catch (ServerCloneException e) {
                 throw new RuntimeException(e);
             }
-            originUrl += System.currentTimeMillis();
+            originUrl = System.currentTimeMillis() + UUID.randomUUID().toString();//在高并发场景下，相同毫秒数可能会有多个重复值
             shortLinkSuffix = HashUtil.hashToBase62(originUrl);
             String fullShortLinkUrl = defaultDomain + '/' + shortLinkSuffix;
             if (!rBloomFilter.contains(fullShortLinkUrl)) {
