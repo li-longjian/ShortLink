@@ -14,20 +14,20 @@ spring:
     gateway:
       routes:
         - id: short-link-admin
-          uri: lb://short-link-admin/api/short-link/admin/**
+          uri: lb://short-link-admin
           predicates:
-            - Path=/api/short-link/admin/**
+            - Path=/api/shortlink/admin/**
           filters:
             - name: TokenValidate
               args:
                 whitePathList:
-                  - /api/short-link/admin/v1/user/login
-                  - /api/short-link/admin/v1/user/has-username
+                  - /api/shortlink/admin/v1/user/login
+                  - /api/shortlink/admin/v1/user/has-username
 
         - id: short-link-project
-          uri: lb://short-link-project/api/short-link/**
+          uri: lb://short-link-project
           predicates:
-            - Path=/api/short-link/**
+            - Path=/api/shortlink/**
           filters:
             - name: TokenValidate
 
