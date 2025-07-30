@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.llj.shortlink.admin.common.constant.RedissionCacheConstant.LOCK_USER_REGISTER_KEY;
 
@@ -100,6 +101,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDo> implements 
      */
     @Override
     public void updateUser(UserUpdatereqDTO updatereqDTO) {
+        if(!Objects.equals(BaseContext.getUserName(),updatereqDTO.getUsername())){
+            throw new ClientException("当前请求参数非法");
+        }
         LambdaUpdateWrapper<UserDo> wrapper = Wrappers.lambdaUpdate(UserDo.class).eq(UserDo::getUsername, updatereqDTO.getUsername());
         baseMapper.update(BeanUtil.toBean(updatereqDTO,UserDo.class), wrapper);
     }
