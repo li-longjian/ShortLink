@@ -24,6 +24,7 @@ import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -72,28 +73,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDo> implements 
     @Override
     @Transactional(propagation = Propagation.REQUIRED)
     public void registerUser(UserRegisterReqDTO userRegisterReqDTO) {
-        if(checkUserNameIsExist(userRegisterReqDTO.getUsername())) throw  new ClientException(BaseErrorCode.USER_NAME_EXIST_ERROR);
-        //对用户名进行加锁: 防止恶意用户对某一未使用用户名大量请求
-        RLock lock = redissonClient.getLock(LOCK_USER_REGISTER_KEY + userRegisterReqDTO.getUsername());
+        String USERNAME = userRegisterReqDTO.getUsername();
+        //首先通过布隆过滤器快速判断是否存在相同用户名
+        if(checkUserNameIsExist(USERNAME)) throw  new ClientException(BaseErrorCode.USER_NAME_EXIST_ERROR);
+        //对用户名进行加分布式锁: 防止恶意用户对某一未使用用户名大量请求
+        RLock lock = redissonClient.getLock(LOCK_USER_REGISTER_KEY + USERNAME);
+        //布隆过滤器误判或高并发情况下没有拿到锁说明已经被占用了
+        if(!lock.tryLock()) throw  new ClientException(BaseErrorCode.USER_NAME_EXIST_ERROR);
         try {
-            if(lock.tryLock()) {
-                int inserted = baseMapper.insert(BeanUtil.toBean(userRegisterReqDTO, UserDo.class));
-                if (inserted < 1) throw new ClientException(BaseErrorCode.USER_REGISTER_ERROR);
-                String USERNAME = userRegisterReqDTO.getUsername();
-                //将用户注册成功的用户名加到布隆过滤器中,防止缓存穿透
-                rBloomFilter.add(USERNAME);
-                //为新注册用户添加默认分组
-                groupService.addGroup("default",USERNAME);
-
-            }else{
-                throw new ClientException(BaseErrorCode.USER_NAME_EXIST_ERROR);
-            }
-
+            int inserted = baseMapper.insert(BeanUtil.toBean(userRegisterReqDTO, UserDo.class));
+            if (inserted < 1) throw new ClientException(BaseErrorCode.USER_REGISTER_ERROR);
+            //将用户注册成功的用户名加到布隆过滤器中,防止缓存穿透
+            rBloomFilter.add(USERNAME);
+            //为新注册用户添加默认分组
+            groupService.addGroup("default",USERNAME);
+        }catch (DuplicateKeyException e){
+            throw new ClientException(BaseErrorCode.USER_NAME_EXIST_ERROR);
         }finally {
             lock.unlock();
         }
-
-
     }
 
     /**
