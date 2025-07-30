@@ -18,10 +18,6 @@ spring:
 server:
   port: 8002
 
-logging:
-    level:
-        org.springframework.ai: debug
-        com.llj.ai: debug
 shortlink:
   group:
     maxSize: 20

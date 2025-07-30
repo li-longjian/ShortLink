@@ -52,7 +52,3 @@ shortlink:
         - zhihu.com
         - juejin.cn
         - cnblogs.com
-logging:
-    level:
-        org.springframework.ai: debug
-        com.llj.ai: debug
