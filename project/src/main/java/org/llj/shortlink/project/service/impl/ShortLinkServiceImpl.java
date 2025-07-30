@@ -22,8 +22,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jodd.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.apache.rocketmq.client.producer.SendResult;
-import org.apache.rocketmq.client.producer.SendStatus;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -611,15 +609,21 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
        //获取统计数据之前先获取读锁
         RLock rLock = rReadWriteLock.readLock();
         fullShortUrl = statsRecord.getFullShortUrl();
-        if(!rLock.tryLock()) {
-            //生产者发送消息
-            SendResult sendResult = delayShortLinkStatsMQProducer.sendMessage(statsRecord);
-            if(!Objects.equals(sendResult.getSendStatus(), SendStatus.SEND_OK)){
-                throw new ServiceException("延迟队列投递消息失败");
-            }
-            // delayShortLinkStatsProducer.send(statsRecord);
-            return;
-        }
+        /**
+         * 删除延迟队列：原因：当访问短连接时，统计数据的工作已经放入消息队列中进行处理。
+         * 消息队列天然支持异步处理，无需额外的延迟机制，就能保证统计操作不会影响主流程
+         * 锁的持有时间会大幅缩短，锁竞争的概率也会相应降低
+         */
+        rLock.lock();//由于我们系统已经进行限流了，此时可以阻塞等待写锁的释放
+//        if(!rLock.tryLock()) {
+//            //生产者发送消息
+//            SendResult sendResult = delayShortLinkStatsMQProducer.sendMessage(statsRecord);
+//            if(!Objects.equals(sendResult.getSendStatus(), SendStatus.SEND_OK)){
+//                throw new ServiceException("延迟队列投递消息失败");
+//            }
+//            // delayShortLinkStatsProducer.send(statsRecord);
+//            return;
+//        }
         //已经获取到了读锁, 执行统计任务
         try {
             if(StrUtil.isBlank(gid)){

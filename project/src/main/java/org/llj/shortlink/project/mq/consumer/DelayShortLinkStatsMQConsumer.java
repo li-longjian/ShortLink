@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
  * 使用Rocket MQ 定义 延迟队列， 对统计数据进行延迟处理
  *
  */
-
+@Deprecated
 @Slf4j
 @Component
 @RequiredArgsConstructor

@@ -22,6 +22,7 @@ import static org.llj.shortlink.project.common.constant.RedisKey.DELAY_QUEUE_STA
  */
 @Component
 @RequiredArgsConstructor
+@Deprecated
 public class DelayShortLinkStatsConsumer  implements InitializingBean {
     private final RedissonClient redisson;
     private final ShortLinkService shortLinkService;
