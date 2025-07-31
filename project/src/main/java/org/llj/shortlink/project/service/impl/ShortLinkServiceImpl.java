@@ -56,7 +56,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.rmi.server.ServerCloneException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -500,17 +499,15 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         String originUrl = linkCreateReqDTO.getOriginUrl();
         String shortLinkSuffix = null;
         while (true) {
-            if (cnt >= maxTryCount) try {
-                throw new ServerCloneException("操作频繁，请稍后再试");
-            } catch (ServerCloneException e) {
-                throw new RuntimeException(e);
+            if (cnt >= maxTryCount) {
+                throw new ServiceException("操作频繁，请稍后再试");
             }
-            originUrl = originUrl + System.currentTimeMillis() + UUID.randomUUID().toString();//在高并发场景下，相同毫秒数可能会有多个重复值
             shortLinkSuffix = HashUtil.hashToBase62(originUrl);
             String fullShortLinkUrl = defaultDomain + '/' + shortLinkSuffix;
             if (!rBloomFilter.contains(fullShortLinkUrl)) {
-                break;
+                break;//布隆过滤器判断不存在，则一定不存在
             }
+            originUrl = originUrl + System.currentTimeMillis() + UUID.randomUUID().toString();//在高并发场景下，相同毫秒数可能会有多个重复值
             cnt++;
         }
 
